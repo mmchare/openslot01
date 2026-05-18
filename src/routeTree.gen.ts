@@ -10,33 +10,77 @@
 
 import { Route as rootRouteImport } from './routes/__root'
 import { Route as IndexRouteImport } from './routes/index'
+import { Route as CommanderAppIdRouteImport } from './routes/commander.$appId'
+import { Route as CommandeSuccesOrderIdRouteImport } from './routes/commande.succes.$orderId'
+import { Route as ApiPublicWebhooksNotchpayRouteImport } from './routes/api/public/webhooks/notchpay'
 
 const IndexRoute = IndexRouteImport.update({
   id: '/',
   path: '/',
   getParentRoute: () => rootRouteImport,
 } as any)
+const CommanderAppIdRoute = CommanderAppIdRouteImport.update({
+  id: '/commander/$appId',
+  path: '/commander/$appId',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const CommandeSuccesOrderIdRoute = CommandeSuccesOrderIdRouteImport.update({
+  id: '/commande/succes/$orderId',
+  path: '/commande/succes/$orderId',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ApiPublicWebhooksNotchpayRoute =
+  ApiPublicWebhooksNotchpayRouteImport.update({
+    id: '/api/public/webhooks/notchpay',
+    path: '/api/public/webhooks/notchpay',
+    getParentRoute: () => rootRouteImport,
+  } as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
+  '/commander/$appId': typeof CommanderAppIdRoute
+  '/commande/succes/$orderId': typeof CommandeSuccesOrderIdRoute
+  '/api/public/webhooks/notchpay': typeof ApiPublicWebhooksNotchpayRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
+  '/commander/$appId': typeof CommanderAppIdRoute
+  '/commande/succes/$orderId': typeof CommandeSuccesOrderIdRoute
+  '/api/public/webhooks/notchpay': typeof ApiPublicWebhooksNotchpayRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
+  '/commander/$appId': typeof CommanderAppIdRoute
+  '/commande/succes/$orderId': typeof CommandeSuccesOrderIdRoute
+  '/api/public/webhooks/notchpay': typeof ApiPublicWebhooksNotchpayRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
-  fullPaths: '/'
+  fullPaths:
+    | '/'
+    | '/commander/$appId'
+    | '/commande/succes/$orderId'
+    | '/api/public/webhooks/notchpay'
   fileRoutesByTo: FileRoutesByTo
-  to: '/'
-  id: '__root__' | '/'
+  to:
+    | '/'
+    | '/commander/$appId'
+    | '/commande/succes/$orderId'
+    | '/api/public/webhooks/notchpay'
+  id:
+    | '__root__'
+    | '/'
+    | '/commander/$appId'
+    | '/commande/succes/$orderId'
+    | '/api/public/webhooks/notchpay'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
+  CommanderAppIdRoute: typeof CommanderAppIdRoute
+  CommandeSuccesOrderIdRoute: typeof CommandeSuccesOrderIdRoute
+  ApiPublicWebhooksNotchpayRoute: typeof ApiPublicWebhooksNotchpayRoute
 }
 
 declare module '@tanstack/react-router' {
@@ -48,22 +92,36 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof IndexRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/commander/$appId': {
+      id: '/commander/$appId'
+      path: '/commander/$appId'
+      fullPath: '/commander/$appId'
+      preLoaderRoute: typeof CommanderAppIdRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/commande/succes/$orderId': {
+      id: '/commande/succes/$orderId'
+      path: '/commande/succes/$orderId'
+      fullPath: '/commande/succes/$orderId'
+      preLoaderRoute: typeof CommandeSuccesOrderIdRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/public/webhooks/notchpay': {
+      id: '/api/public/webhooks/notchpay'
+      path: '/api/public/webhooks/notchpay'
+      fullPath: '/api/public/webhooks/notchpay'
+      preLoaderRoute: typeof ApiPublicWebhooksNotchpayRouteImport
+      parentRoute: typeof rootRouteImport
+    }
   }
 }
 
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
+  CommanderAppIdRoute: CommanderAppIdRoute,
+  CommandeSuccesOrderIdRoute: CommandeSuccesOrderIdRoute,
+  ApiPublicWebhooksNotchpayRoute: ApiPublicWebhooksNotchpayRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
   ._addFileTypes<FileRouteTypes>()
-
-import type { getRouter } from './router.tsx'
-import type { startInstance } from './start.ts'
-declare module '@tanstack/react-start' {
-  interface Register {
-    ssr: true
-    router: Awaited<ReturnType<typeof getRouter>>
-    config: Awaited<ReturnType<typeof startInstance.getOptions>>
-  }
-}
