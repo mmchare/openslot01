@@ -2,6 +2,7 @@ import { createFileRoute, Link } from "@tanstack/react-router";
 import { useSuspenseQuery } from "@tanstack/react-query";
 import { Zap, ShieldCheck, Smartphone, Clock } from "lucide-react";
 import { getCatalog } from "@/lib/catalog.functions";
+import type { CatalogItem } from "@/lib/types";
 import { AppIcon } from "@/components/AppIcon";
 import { SiteHeader } from "@/components/SiteHeader";
 import { SiteFooter } from "@/components/SiteFooter";
@@ -29,7 +30,7 @@ export const Route = createFileRoute("/")({
 
 function HomePage() {
   const initial = Route.useLoaderData();
-  const { data: items } = useSuspenseQuery({
+  const { data: items } = useSuspenseQuery<CatalogItem[]>({
     queryKey: ["catalog"],
     queryFn: () => getCatalog(),
     initialData: initial,
@@ -138,19 +139,7 @@ function Feature({ icon, label }: { icon: React.ReactNode; label: string }) {
   );
 }
 
-function ProductCard({
-  item,
-}: {
-  item: {
-    id: string;
-    name: string;
-    category: string;
-    description: string | null;
-    price_fcfa: number;
-    image_url: string | null;
-    stock_disponible: number;
-  };
-}) {
+function ProductCard({ item }: { item: CatalogItem }) {
   const inStock = item.stock_disponible > 0;
   return (
     <div className="group flex flex-col rounded-2xl border border-border bg-gradient-card p-5 shadow-card transition hover:border-primary/40">
