@@ -14,16 +14,210 @@ export type Database = {
   }
   public: {
     Tables: {
-      [_ in never]: never
+      applications: {
+        Row: {
+          category: string
+          created_at: string
+          description: string | null
+          id: string
+          image_url: string | null
+          is_active: boolean
+          name: string
+          price_fcfa: number
+          sort_order: number
+        }
+        Insert: {
+          category: string
+          created_at?: string
+          description?: string | null
+          id?: string
+          image_url?: string | null
+          is_active?: boolean
+          name: string
+          price_fcfa: number
+          sort_order?: number
+        }
+        Update: {
+          category?: string
+          created_at?: string
+          description?: string | null
+          id?: string
+          image_url?: string | null
+          is_active?: boolean
+          name?: string
+          price_fcfa?: number
+          sort_order?: number
+        }
+        Relationships: []
+      }
+      orders: {
+        Row: {
+          amount_paid: number
+          application_id: string
+          client_email: string
+          client_name: string
+          client_whatsapp: string
+          created_at: string
+          id: string
+          notchpay_reference: string | null
+          slot_id: string | null
+          status: Database["public"]["Enums"]["order_status"]
+          updated_at: string
+        }
+        Insert: {
+          amount_paid: number
+          application_id: string
+          client_email: string
+          client_name: string
+          client_whatsapp: string
+          created_at?: string
+          id?: string
+          notchpay_reference?: string | null
+          slot_id?: string | null
+          status?: Database["public"]["Enums"]["order_status"]
+          updated_at?: string
+        }
+        Update: {
+          amount_paid?: number
+          application_id?: string
+          client_email?: string
+          client_name?: string
+          client_whatsapp?: string
+          created_at?: string
+          id?: string
+          notchpay_reference?: string | null
+          slot_id?: string | null
+          status?: Database["public"]["Enums"]["order_status"]
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "orders_application_id_fkey"
+            columns: ["application_id"]
+            isOneToOne: false
+            referencedRelation: "applications"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "orders_application_id_fkey"
+            columns: ["application_id"]
+            isOneToOne: false
+            referencedRelation: "applications_catalog"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "orders_slot_id_fkey"
+            columns: ["slot_id"]
+            isOneToOne: false
+            referencedRelation: "slots_stock"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      slots_stock: {
+        Row: {
+          account_email: string
+          account_password: string
+          application_id: string
+          created_at: string
+          id: string
+          profile_name: string | null
+          slot_number: number
+          status: Database["public"]["Enums"]["slot_status"]
+          updated_at: string
+        }
+        Insert: {
+          account_email: string
+          account_password: string
+          application_id: string
+          created_at?: string
+          id?: string
+          profile_name?: string | null
+          slot_number: number
+          status?: Database["public"]["Enums"]["slot_status"]
+          updated_at?: string
+        }
+        Update: {
+          account_email?: string
+          account_password?: string
+          application_id?: string
+          created_at?: string
+          id?: string
+          profile_name?: string | null
+          slot_number?: number
+          status?: Database["public"]["Enums"]["slot_status"]
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "slots_stock_application_id_fkey"
+            columns: ["application_id"]
+            isOneToOne: false
+            referencedRelation: "applications"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "slots_stock_application_id_fkey"
+            columns: ["application_id"]
+            isOneToOne: false
+            referencedRelation: "applications_catalog"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
     }
     Views: {
-      [_ in never]: never
+      applications_catalog: {
+        Row: {
+          category: string | null
+          description: string | null
+          id: string | null
+          image_url: string | null
+          name: string | null
+          price_fcfa: number | null
+          sort_order: number | null
+          stock_disponible: number | null
+        }
+        Insert: {
+          category?: string | null
+          description?: string | null
+          id?: string | null
+          image_url?: string | null
+          name?: string | null
+          price_fcfa?: number | null
+          sort_order?: number | null
+          stock_disponible?: never
+        }
+        Update: {
+          category?: string | null
+          description?: string | null
+          id?: string | null
+          image_url?: string | null
+          name?: string | null
+          price_fcfa?: number | null
+          sort_order?: number | null
+          stock_disponible?: never
+        }
+        Relationships: []
+      }
     }
     Functions: {
-      [_ in never]: never
+      allocate_slot_for_order: {
+        Args: { p_order_id: string }
+        Returns: {
+          account_email: string
+          account_password: string
+          application_name: string
+          profile_name: string
+          remaining_stock: number
+          slot_id: string
+          slot_number: number
+        }[]
+      }
     }
     Enums: {
-      [_ in never]: never
+      order_status: "en_attente" | "paye" | "echoue"
+      slot_status: "disponible" | "vendu" | "bloque"
     }
     CompositeTypes: {
       [_ in never]: never
@@ -150,6 +344,9 @@ export type CompositeTypes<
 
 export const Constants = {
   public: {
-    Enums: {},
+    Enums: {
+      order_status: ["en_attente", "paye", "echoue"],
+      slot_status: ["disponible", "vendu", "bloque"],
+    },
   },
 } as const
