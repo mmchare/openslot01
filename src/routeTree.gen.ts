@@ -9,11 +9,18 @@
 // Additionally, you should also exclude this file from your linter and/or formatter to prevent it from being checked or modified.
 
 import { Route as rootRouteImport } from './routes/__root'
+import { Route as AdminRouteImport } from './routes/admin'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as CommanderAppIdRouteImport } from './routes/commander.$appId'
+import { Route as CommandeOrderIdRouteImport } from './routes/commande.$orderId'
 import { Route as CommandeSuccesOrderIdRouteImport } from './routes/commande.succes.$orderId'
 import { Route as ApiPublicWebhooksNotchpayRouteImport } from './routes/api/public/webhooks/notchpay'
 
+const AdminRoute = AdminRouteImport.update({
+  id: '/admin',
+  path: '/admin',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const IndexRoute = IndexRouteImport.update({
   id: '/',
   path: '/',
@@ -22,6 +29,11 @@ const IndexRoute = IndexRouteImport.update({
 const CommanderAppIdRoute = CommanderAppIdRouteImport.update({
   id: '/commander/$appId',
   path: '/commander/$appId',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const CommandeOrderIdRoute = CommandeOrderIdRouteImport.update({
+  id: '/commande/$orderId',
+  path: '/commande/$orderId',
   getParentRoute: () => rootRouteImport,
 } as any)
 const CommandeSuccesOrderIdRoute = CommandeSuccesOrderIdRouteImport.update({
@@ -38,12 +50,16 @@ const ApiPublicWebhooksNotchpayRoute =
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
+  '/admin': typeof AdminRoute
+  '/commande/$orderId': typeof CommandeOrderIdRoute
   '/commander/$appId': typeof CommanderAppIdRoute
   '/commande/succes/$orderId': typeof CommandeSuccesOrderIdRoute
   '/api/public/webhooks/notchpay': typeof ApiPublicWebhooksNotchpayRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
+  '/admin': typeof AdminRoute
+  '/commande/$orderId': typeof CommandeOrderIdRoute
   '/commander/$appId': typeof CommanderAppIdRoute
   '/commande/succes/$orderId': typeof CommandeSuccesOrderIdRoute
   '/api/public/webhooks/notchpay': typeof ApiPublicWebhooksNotchpayRoute
@@ -51,6 +67,8 @@ export interface FileRoutesByTo {
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
+  '/admin': typeof AdminRoute
+  '/commande/$orderId': typeof CommandeOrderIdRoute
   '/commander/$appId': typeof CommanderAppIdRoute
   '/commande/succes/$orderId': typeof CommandeSuccesOrderIdRoute
   '/api/public/webhooks/notchpay': typeof ApiPublicWebhooksNotchpayRoute
@@ -59,18 +77,24 @@ export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
   fullPaths:
     | '/'
+    | '/admin'
+    | '/commande/$orderId'
     | '/commander/$appId'
     | '/commande/succes/$orderId'
     | '/api/public/webhooks/notchpay'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
+    | '/admin'
+    | '/commande/$orderId'
     | '/commander/$appId'
     | '/commande/succes/$orderId'
     | '/api/public/webhooks/notchpay'
   id:
     | '__root__'
     | '/'
+    | '/admin'
+    | '/commande/$orderId'
     | '/commander/$appId'
     | '/commande/succes/$orderId'
     | '/api/public/webhooks/notchpay'
@@ -78,6 +102,8 @@ export interface FileRouteTypes {
 }
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
+  AdminRoute: typeof AdminRoute
+  CommandeOrderIdRoute: typeof CommandeOrderIdRoute
   CommanderAppIdRoute: typeof CommanderAppIdRoute
   CommandeSuccesOrderIdRoute: typeof CommandeSuccesOrderIdRoute
   ApiPublicWebhooksNotchpayRoute: typeof ApiPublicWebhooksNotchpayRoute
@@ -85,6 +111,13 @@ export interface RootRouteChildren {
 
 declare module '@tanstack/react-router' {
   interface FileRoutesByPath {
+    '/admin': {
+      id: '/admin'
+      path: '/admin'
+      fullPath: '/admin'
+      preLoaderRoute: typeof AdminRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/': {
       id: '/'
       path: '/'
@@ -97,6 +130,13 @@ declare module '@tanstack/react-router' {
       path: '/commander/$appId'
       fullPath: '/commander/$appId'
       preLoaderRoute: typeof CommanderAppIdRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/commande/$orderId': {
+      id: '/commande/$orderId'
+      path: '/commande/$orderId'
+      fullPath: '/commande/$orderId'
+      preLoaderRoute: typeof CommandeOrderIdRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/commande/succes/$orderId': {
@@ -118,6 +158,8 @@ declare module '@tanstack/react-router' {
 
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
+  AdminRoute: AdminRoute,
+  CommandeOrderIdRoute: CommandeOrderIdRoute,
   CommanderAppIdRoute: CommanderAppIdRoute,
   CommandeSuccesOrderIdRoute: CommandeSuccesOrderIdRoute,
   ApiPublicWebhooksNotchpayRoute: ApiPublicWebhooksNotchpayRoute,
@@ -125,13 +167,3 @@ const rootRouteChildren: RootRouteChildren = {
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
   ._addFileTypes<FileRouteTypes>()
-
-import type { getRouter } from './router.tsx'
-import type { startInstance } from './start.ts'
-declare module '@tanstack/react-start' {
-  interface Register {
-    ssr: true
-    router: Awaited<ReturnType<typeof getRouter>>
-    config: Awaited<ReturnType<typeof startInstance.getOptions>>
-  }
-}
