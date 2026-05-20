@@ -12,6 +12,7 @@ import { Route as rootRouteImport } from './routes/__root'
 import { Route as AdminRouteImport } from './routes/admin'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as CommanderAppIdRouteImport } from './routes/commander.$appId'
+import { Route as CommandeOrderIdRouteImport } from './routes/commande.$orderId'
 import { Route as CommandeSuccesOrderIdRouteImport } from './routes/commande.succes.$orderId'
 import { Route as ApiPublicWebhooksNotchpayRouteImport } from './routes/api/public/webhooks/notchpay'
 
@@ -30,6 +31,11 @@ const CommanderAppIdRoute = CommanderAppIdRouteImport.update({
   path: '/commander/$appId',
   getParentRoute: () => rootRouteImport,
 } as any)
+const CommandeOrderIdRoute = CommandeOrderIdRouteImport.update({
+  id: '/commande/$orderId',
+  path: '/commande/$orderId',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const CommandeSuccesOrderIdRoute = CommandeSuccesOrderIdRouteImport.update({
   id: '/commande/succes/$orderId',
   path: '/commande/succes/$orderId',
@@ -45,6 +51,7 @@ const ApiPublicWebhooksNotchpayRoute =
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/admin': typeof AdminRoute
+  '/commande/$orderId': typeof CommandeOrderIdRoute
   '/commander/$appId': typeof CommanderAppIdRoute
   '/commande/succes/$orderId': typeof CommandeSuccesOrderIdRoute
   '/api/public/webhooks/notchpay': typeof ApiPublicWebhooksNotchpayRoute
@@ -52,6 +59,7 @@ export interface FileRoutesByFullPath {
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/admin': typeof AdminRoute
+  '/commande/$orderId': typeof CommandeOrderIdRoute
   '/commander/$appId': typeof CommanderAppIdRoute
   '/commande/succes/$orderId': typeof CommandeSuccesOrderIdRoute
   '/api/public/webhooks/notchpay': typeof ApiPublicWebhooksNotchpayRoute
@@ -60,6 +68,7 @@ export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
   '/admin': typeof AdminRoute
+  '/commande/$orderId': typeof CommandeOrderIdRoute
   '/commander/$appId': typeof CommanderAppIdRoute
   '/commande/succes/$orderId': typeof CommandeSuccesOrderIdRoute
   '/api/public/webhooks/notchpay': typeof ApiPublicWebhooksNotchpayRoute
@@ -69,6 +78,7 @@ export interface FileRouteTypes {
   fullPaths:
     | '/'
     | '/admin'
+    | '/commande/$orderId'
     | '/commander/$appId'
     | '/commande/succes/$orderId'
     | '/api/public/webhooks/notchpay'
@@ -76,6 +86,7 @@ export interface FileRouteTypes {
   to:
     | '/'
     | '/admin'
+    | '/commande/$orderId'
     | '/commander/$appId'
     | '/commande/succes/$orderId'
     | '/api/public/webhooks/notchpay'
@@ -83,6 +94,7 @@ export interface FileRouteTypes {
     | '__root__'
     | '/'
     | '/admin'
+    | '/commande/$orderId'
     | '/commander/$appId'
     | '/commande/succes/$orderId'
     | '/api/public/webhooks/notchpay'
@@ -91,6 +103,7 @@ export interface FileRouteTypes {
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
   AdminRoute: typeof AdminRoute
+  CommandeOrderIdRoute: typeof CommandeOrderIdRoute
   CommanderAppIdRoute: typeof CommanderAppIdRoute
   CommandeSuccesOrderIdRoute: typeof CommandeSuccesOrderIdRoute
   ApiPublicWebhooksNotchpayRoute: typeof ApiPublicWebhooksNotchpayRoute
@@ -119,6 +132,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof CommanderAppIdRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/commande/$orderId': {
+      id: '/commande/$orderId'
+      path: '/commande/$orderId'
+      fullPath: '/commande/$orderId'
+      preLoaderRoute: typeof CommandeOrderIdRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/commande/succes/$orderId': {
       id: '/commande/succes/$orderId'
       path: '/commande/succes/$orderId'
@@ -139,6 +159,7 @@ declare module '@tanstack/react-router' {
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   AdminRoute: AdminRoute,
+  CommandeOrderIdRoute: CommandeOrderIdRoute,
   CommanderAppIdRoute: CommanderAppIdRoute,
   CommandeSuccesOrderIdRoute: CommandeSuccesOrderIdRoute,
   ApiPublicWebhooksNotchpayRoute: ApiPublicWebhooksNotchpayRoute,
