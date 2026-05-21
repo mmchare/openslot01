@@ -2,13 +2,14 @@ import { createFileRoute, Link } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
-import { Loader2, Lock, Plus, Power, Trash2, X } from "lucide-react";
+import { Check, Loader2, Lock, Pencil, Plus, Power, Trash2, X } from "lucide-react";
 import {
   adminAddSlot,
   adminDeleteSlot,
   adminListApps,
   adminListSlots,
   adminToggleApp,
+  adminUpdateAppPrice,
   verifyAdminPassword,
 } from "@/lib/admin.functions";
 import { SiteHeader } from "@/components/SiteHeader";
