@@ -199,12 +199,72 @@ function AdminDashboard({
                     </span>
                   )}
                 </div>
-                <div className="mt-1 text-sm text-muted-foreground">
-                  {a.price_fcfa.toLocaleString("fr-FR")} FCFA ·{" "}
+                <div className="mt-1 flex flex-wrap items-center gap-2 text-sm text-muted-foreground">
+                  {editingPriceId === a.id ? (
+                    <form
+                      onSubmit={(e) => {
+                        e.preventDefault();
+                        const n = Number(priceDraft);
+                        if (!Number.isFinite(n) || n < 0) return;
+                        priceMut.mutate(
+                          { application_id: a.id, price_fcfa: Math.round(n) },
+                          { onSuccess: () => setEditingPriceId(null) },
+                        );
+                      }}
+                      className="flex items-center gap-1"
+                    >
+                      <input
+                        type="number"
+                        min={0}
+                        step={100}
+                        value={priceDraft}
+                        onChange={(e) => setPriceDraft(e.target.value)}
+                        autoFocus
+                        className="w-28 rounded-md border border-border bg-background px-2 py-1 text-sm"
+                      />
+                      <span className="text-xs">FCFA</span>
+                      <button
+                        type="submit"
+                        disabled={priceMut.isPending}
+                        className="rounded-md bg-primary/15 p-1 text-primary hover:bg-primary/25 disabled:opacity-50"
+                        title="Enregistrer"
+                      >
+                        {priceMut.isPending ? (
+                          <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                        ) : (
+                          <Check className="h-3.5 w-3.5" />
+                        )}
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => setEditingPriceId(null)}
+                        className="rounded-md border border-border p-1 text-muted-foreground hover:text-foreground"
+                        title="Annuler"
+                      >
+                        <X className="h-3.5 w-3.5" />
+                      </button>
+                    </form>
+                  ) : (
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setEditingPriceId(a.id);
+                        setPriceDraft(String(a.price_fcfa));
+                      }}
+                      className="inline-flex items-center gap-1 rounded-md px-1.5 py-0.5 hover:bg-muted"
+                      title="Modifier le prix"
+                    >
+                      <span className="font-medium text-foreground">
+                        {a.price_fcfa.toLocaleString("fr-FR")} FCFA
+                      </span>
+                      <Pencil className="h-3 w-3 text-muted-foreground" />
+                    </button>
+                  )}
+                  <span>·</span>
                   <span className="text-primary">
                     {a.stock_disponible} dispo
-                  </span>{" "}
-                  · {a.stock_vendu} vendus
+                  </span>
+                  <span>· {a.stock_vendu} vendus</span>
                 </div>
               </div>
               <div className="flex items-center gap-2">
