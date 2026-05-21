@@ -273,3 +273,57 @@ function WhatsAppButton({
     </a>
   );
 }
+
+function SubscriptionPeriod({
+  start,
+  end,
+}: {
+  start: string | null;
+  end: string | null;
+}) {
+  const fmt = (d: string | null) =>
+    d
+      ? new Date(d).toLocaleDateString("fr-FR", {
+          day: "2-digit",
+          month: "long",
+          year: "numeric",
+        })
+      : "—";
+  const daysLeft = (() => {
+    if (!end) return null;
+    const ms = new Date(end).getTime() - Date.now();
+    return Math.max(0, Math.ceil(ms / (1000 * 60 * 60 * 24)));
+  })();
+  const expired = end ? new Date(end).getTime() < Date.now() : false;
+  return (
+    <div className="mt-5 rounded-xl border border-border bg-surface p-4">
+      <div className="text-xs uppercase tracking-wider text-muted-foreground">
+        Période d'abonnement
+      </div>
+      <div className="mt-2 grid grid-cols-1 gap-2 sm:grid-cols-2">
+        <div className="flex items-center gap-2 text-sm">
+          <CalendarCheck className="h-4 w-4 text-primary" />
+          <span className="text-muted-foreground">Début :</span>
+          <span className="font-medium">{fmt(start)}</span>
+        </div>
+        <div className="flex items-center gap-2 text-sm">
+          <CalendarClock
+            className={`h-4 w-4 ${expired ? "text-destructive" : "text-primary"}`}
+          />
+          <span className="text-muted-foreground">Fin :</span>
+          <span className="font-medium">{fmt(end)}</span>
+        </div>
+      </div>
+      {daysLeft !== null && (
+        <p
+          className={`mt-2 text-xs ${expired ? "text-destructive" : "text-muted-foreground"}`}
+        >
+          {expired
+            ? "Abonnement expiré."
+            : `Il reste ${daysLeft} jour${daysLeft > 1 ? "s" : ""}.`}
+        </p>
+      )}
+    </div>
+  );
+}
+
