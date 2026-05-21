@@ -25,6 +25,7 @@ export type Database = {
           name: string
           price_fcfa: number
           sort_order: number
+          subscription_duration_days: number
         }
         Insert: {
           category: string
@@ -36,6 +37,7 @@ export type Database = {
           name: string
           price_fcfa: number
           sort_order?: number
+          subscription_duration_days?: number
         }
         Update: {
           category?: string
@@ -47,6 +49,7 @@ export type Database = {
           name?: string
           price_fcfa?: number
           sort_order?: number
+          subscription_duration_days?: number
         }
         Relationships: []
       }
@@ -62,6 +65,8 @@ export type Database = {
           notchpay_reference: string | null
           slot_id: string | null
           status: Database["public"]["Enums"]["order_status"]
+          subscription_end_at: string | null
+          subscription_start_at: string | null
           updated_at: string
         }
         Insert: {
@@ -75,6 +80,8 @@ export type Database = {
           notchpay_reference?: string | null
           slot_id?: string | null
           status?: Database["public"]["Enums"]["order_status"]
+          subscription_end_at?: string | null
+          subscription_start_at?: string | null
           updated_at?: string
         }
         Update: {
@@ -88,6 +95,8 @@ export type Database = {
           notchpay_reference?: string | null
           slot_id?: string | null
           status?: Database["public"]["Enums"]["order_status"]
+          subscription_end_at?: string | null
+          subscription_start_at?: string | null
           updated_at?: string
         }
         Relationships: [
