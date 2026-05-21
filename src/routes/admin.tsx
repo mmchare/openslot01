@@ -188,16 +188,35 @@ function AdminDashboard({
         <div>
           <h1 className="font-display text-2xl sm:text-3xl">Panneau admin</h1>
           <p className="text-sm text-muted-foreground">
-            Active/désactive les produits, ajoute ou retire des slots de stock.
+            Gère le catalogue, les icônes, les prix, la durée d'abonnement et le stock.
           </p>
         </div>
-        <button
-          onClick={onLogout}
-          className="rounded-lg border border-border bg-background px-3 py-1.5 text-xs text-muted-foreground hover:border-primary/40"
-        >
-          Déconnexion
-        </button>
+        <div className="flex items-center gap-2">
+          <button
+            onClick={() => setShowCreate((v) => !v)}
+            className="inline-flex items-center gap-1 rounded-lg bg-gradient-primary px-3 py-1.5 text-xs font-semibold text-primary-foreground shadow-glow"
+          >
+            <Plus className="h-3 w-3" />
+            {showCreate ? "Fermer" : "Nouvelle app"}
+          </button>
+          <button
+            onClick={onLogout}
+            className="rounded-lg border border-border bg-background px-3 py-1.5 text-xs text-muted-foreground hover:border-primary/40"
+          >
+            Déconnexion
+          </button>
+        </div>
       </div>
+
+      {showCreate && (
+        <CreateAppForm
+          password={password}
+          onCreated={() => {
+            invalidate();
+            setShowCreate(false);
+          }}
+        />
+      )}
 
       {isLoading && (
         <div className="mt-10 flex items-center gap-2 text-muted-foreground">
@@ -211,8 +230,29 @@ function AdminDashboard({
             key={a.id}
             className="rounded-xl border border-border bg-surface p-4"
           >
-            <div className="flex flex-wrap items-center justify-between gap-3">
-              <div className="min-w-0">
+            <div className="flex flex-wrap items-start justify-between gap-3">
+              <div className="flex min-w-0 items-start gap-3">
+                <button
+                  type="button"
+                  onClick={() => {
+                    setEditingImageId(a.id);
+                    setImageDraft(a.image_url ?? "");
+                  }}
+                  className="group relative h-12 w-12 shrink-0 overflow-hidden rounded-lg border border-border bg-background"
+                  title="Modifier l'icône"
+                >
+                  {a.image_url ? (
+                    <img src={a.image_url} alt={a.name} className="h-full w-full object-cover" />
+                  ) : (
+                    <div className="flex h-full w-full items-center justify-center text-muted-foreground">
+                      <ImageIcon className="h-5 w-5" />
+                    </div>
+                  )}
+                  <div className="absolute inset-0 flex items-center justify-center bg-background/70 opacity-0 transition group-hover:opacity-100">
+                    <Pencil className="h-3.5 w-3.5 text-primary" />
+                  </div>
+                </button>
+                <div className="min-w-0">
                 <div className="flex items-center gap-2">
                   <span className="font-semibold">{a.name}</span>
                   <span className="rounded-full bg-muted px-2 py-0.5 text-[10px] uppercase tracking-wider text-muted-foreground">
@@ -224,6 +264,51 @@ function AdminDashboard({
                     </span>
                   )}
                 </div>
+                {editingImageId === a.id && (
+                  <form
+                    onSubmit={(e) => {
+                      e.preventDefault();
+                      imageMut.mutate(
+                        { application_id: a.id, image_url: imageDraft.trim() || null },
+                        { onSuccess: () => setEditingImageId(null) },
+                      );
+                    }}
+                    className="mt-2 flex flex-wrap items-center gap-1"
+                  >
+                    <input
+                      type="url"
+                      placeholder="https://… (URL de l'icône)"
+                      value={imageDraft}
+                      onChange={(e) => setImageDraft(e.target.value)}
+                      autoFocus
+                      className="w-64 rounded-md border border-border bg-background px-2 py-1 text-xs"
+                    />
+                    <button
+                      type="submit"
+                      disabled={imageMut.isPending}
+                      className="rounded-md bg-primary/15 p-1 text-primary hover:bg-primary/25 disabled:opacity-50"
+                    >
+                      {imageMut.isPending ? (
+                        <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                      ) : (
+                        <Check className="h-3.5 w-3.5" />
+                      )}
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setEditingImageId(null)}
+                      className="rounded-md border border-border p-1 text-muted-foreground hover:text-foreground"
+                    >
+                      <X className="h-3.5 w-3.5" />
+                    </button>
+                    {imageMut.error && (
+                      <span className="w-full text-xs text-destructive">
+                        {(imageMut.error as Error).message}
+                      </span>
+                    )}
+                  </form>
+                )}
+
                 <div className="mt-1 flex flex-wrap items-center gap-2 text-sm text-muted-foreground">
                   {editingPriceId === a.id ? (
                     <form
