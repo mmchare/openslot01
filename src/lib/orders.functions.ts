@@ -95,7 +95,7 @@ export const getOrderForSuccess = createServerFn({ method: "GET" })
     const { data: order } = await supabaseAdmin
       .from("orders")
       .select(
-        "id, status, client_name, client_whatsapp, amount_paid, slot_id, applications(name)",
+        "id, status, client_name, client_whatsapp, amount_paid, slot_id, subscription_start_at, subscription_end_at, applications(name)",
       )
       .eq("id", data.order_id)
       .maybeSingle();
@@ -127,9 +127,12 @@ export const getOrderForSuccess = createServerFn({ method: "GET" })
       application_name:
         (order.applications as { name: string } | null)?.name ?? "Produit",
       amount_paid: order.amount_paid,
+      subscription_start_at: order.subscription_start_at,
+      subscription_end_at: order.subscription_end_at,
       access,
     };
   });
+
 
 // DEV: simule un paiement réussi (utilisé uniquement quand Notch Pay
 // n'est pas encore configuré). Sécurité: vérifie que la commande est en
