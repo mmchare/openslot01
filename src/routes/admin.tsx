@@ -646,3 +646,109 @@ function StockManager({ appId, password }: { appId: string; password: string }) 
     </div>
   );
 }
+
+function CreateAppForm({
+  password,
+  onCreated,
+}: {
+  password: string;
+  onCreated: () => void;
+}) {
+  const create = useServerFn(adminCreateApp);
+  const [form, setForm] = useState({
+    name: "",
+    category: "Streaming",
+    description: "",
+    price_fcfa: 2000,
+    image_url: "",
+    subscription_duration_days: 30,
+  });
+  const mut = useMutation({
+    mutationFn: () =>
+      create({
+        data: {
+          password,
+          name: form.name.trim(),
+          category: form.category.trim(),
+          description: form.description.trim() || null,
+          price_fcfa: Math.round(Number(form.price_fcfa) || 0),
+          image_url: form.image_url.trim() || null,
+          subscription_duration_days: Math.round(Number(form.subscription_duration_days) || 30),
+        },
+      }),
+    onSuccess: onCreated,
+  });
+
+  return (
+    <form
+      onSubmit={(e) => {
+        e.preventDefault();
+        mut.mutate();
+      }}
+      className="mt-4 grid grid-cols-1 gap-2 rounded-xl border border-primary/30 bg-surface p-4 sm:grid-cols-6"
+    >
+      <input
+        required
+        placeholder="Nom de l'app"
+        value={form.name}
+        onChange={(e) => setForm({ ...form, name: e.target.value })}
+        className="rounded-lg border border-border bg-background px-3 py-2 text-sm sm:col-span-3"
+      />
+      <input
+        required
+        placeholder="Catégorie"
+        value={form.category}
+        onChange={(e) => setForm({ ...form, category: e.target.value })}
+        className="rounded-lg border border-border bg-background px-3 py-2 text-sm sm:col-span-3"
+      />
+      <input
+        placeholder="URL de l'icône (https://...)"
+        value={form.image_url}
+        onChange={(e) => setForm({ ...form, image_url: e.target.value })}
+        className="rounded-lg border border-border bg-background px-3 py-2 text-sm sm:col-span-6"
+      />
+      <input
+        type="number"
+        min={0}
+        step={100}
+        required
+        placeholder="Prix FCFA"
+        value={form.price_fcfa}
+        onChange={(e) => setForm({ ...form, price_fcfa: Number(e.target.value) })}
+        className="rounded-lg border border-border bg-background px-3 py-2 text-sm sm:col-span-3"
+      />
+      <input
+        type="number"
+        min={1}
+        max={3650}
+        required
+        placeholder="Durée (jours)"
+        value={form.subscription_duration_days}
+        onChange={(e) =>
+          setForm({ ...form, subscription_duration_days: Number(e.target.value) })
+        }
+        className="rounded-lg border border-border bg-background px-3 py-2 text-sm sm:col-span-3"
+      />
+      <textarea
+        placeholder="Description (optionnel)"
+        value={form.description}
+        onChange={(e) => setForm({ ...form, description: e.target.value })}
+        rows={2}
+        className="rounded-lg border border-border bg-background px-3 py-2 text-sm sm:col-span-6"
+      />
+      <button
+        type="submit"
+        disabled={mut.isPending || !form.name.trim()}
+        className="sm:col-span-6 inline-flex items-center justify-center gap-1 rounded-lg bg-gradient-primary px-3 py-2 text-sm font-semibold text-primary-foreground shadow-glow disabled:opacity-50"
+      >
+        {mut.isPending ? <Loader2 className="h-4 w-4 animate-spin" /> : <Plus className="h-4 w-4" />}
+        Créer l'application
+      </button>
+      {mut.error && (
+        <p className="sm:col-span-6 text-xs text-destructive">
+          {(mut.error as Error).message}
+        </p>
+      )}
+    </form>
+  );
+}
