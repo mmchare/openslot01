@@ -146,6 +146,15 @@ function AdminDashboard({
     onSuccess: () => qc.invalidateQueries({ queryKey: ["admin-apps"] }),
   });
 
+  const priceMut = useMutation({
+    mutationFn: (v: { application_id: string; price_fcfa: number }) =>
+      updatePrice({ data: { password, ...v } }),
+    onSuccess: () => qc.invalidateQueries({ queryKey: ["admin-apps"] }),
+  });
+
+  const [editingPriceId, setEditingPriceId] = useState<string | null>(null);
+  const [priceDraft, setPriceDraft] = useState<string>("");
+
   const [openAppId, setOpenAppId] = useState<string | null>(null);
 
   return (
