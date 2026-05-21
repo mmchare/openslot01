@@ -73,6 +73,23 @@ export const adminToggleApp = createServerFn({ method: "POST" })
     return { ok: true };
   });
 
+export const adminUpdateAppPrice = createServerFn({ method: "POST" })
+  .inputValidator((input) =>
+    PasswordOnly.extend({
+      application_id: z.string().uuid(),
+      price_fcfa: z.number().int().min(0).max(10_000_000),
+    }).parse(input),
+  )
+  .handler(async ({ data }) => {
+    checkPassword(data.password);
+    const { error } = await supabaseAdmin
+      .from("applications")
+      .update({ price_fcfa: data.price_fcfa })
+      .eq("id", data.application_id);
+    if (error) throw new Error(error.message);
+    return { ok: true };
+  });
+
 export const adminListSlots = createServerFn({ method: "POST" })
   .inputValidator((input) =>
     PasswordOnly.extend({ application_id: z.string().uuid() }).parse(input),
