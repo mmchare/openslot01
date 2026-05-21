@@ -15,6 +15,8 @@ export interface OrderSuccessPayload {
   client_whatsapp: string;
   application_name: string;
   amount_paid: number;
+  subscription_start_at: string | null;
+  subscription_end_at: string | null;
   access: null | {
     email: string;
     password: string;
@@ -22,3 +24,4 @@ export interface OrderSuccessPayload {
     profile_name: string | null;
   };
 }
+

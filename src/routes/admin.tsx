@@ -2,18 +2,22 @@ import { createFileRoute, Link } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
-import { Check, Loader2, Lock, Pencil, Plus, Power, Trash2, X } from "lucide-react";
+import { Check, ImageIcon, Loader2, Lock, Pencil, Plus, Power, Timer, Trash2, X } from "lucide-react";
 import {
   adminAddSlot,
+  adminCreateApp,
   adminDeleteSlot,
   adminListApps,
   adminListSlots,
   adminToggleApp,
+  adminUpdateAppDuration,
+  adminUpdateAppImage,
   adminUpdateAppPrice,
   verifyAdminPassword,
 } from "@/lib/admin.functions";
 import { SiteHeader } from "@/components/SiteHeader";
 import { SiteFooter } from "@/components/SiteFooter";
+
 
 const PWD_KEY = "openslot_admin_pwd";
 
@@ -128,6 +132,8 @@ function AdminDashboard({
   const listApps = useServerFn(adminListApps);
   const toggleApp = useServerFn(adminToggleApp);
   const updatePrice = useServerFn(adminUpdateAppPrice);
+  const updateImage = useServerFn(adminUpdateAppImage);
+  const updateDuration = useServerFn(adminUpdateAppDuration);
 
   const { data: apps, isLoading, error } = useQuery({
     queryKey: ["admin-apps"],
@@ -135,27 +141,46 @@ function AdminDashboard({
     retry: false,
   });
 
-  // Si erreur d'auth → déconnexion auto
   useEffect(() => {
     if (error) onLogout();
   }, [error, onLogout]);
 
+  const invalidate = () => qc.invalidateQueries({ queryKey: ["admin-apps"] });
+
   const toggleMut = useMutation({
     mutationFn: (v: { application_id: string; is_active: boolean }) =>
       toggleApp({ data: { password, ...v } }),
-    onSuccess: () => qc.invalidateQueries({ queryKey: ["admin-apps"] }),
+    onSuccess: invalidate,
   });
 
   const priceMut = useMutation({
     mutationFn: (v: { application_id: string; price_fcfa: number }) =>
       updatePrice({ data: { password, ...v } }),
-    onSuccess: () => qc.invalidateQueries({ queryKey: ["admin-apps"] }),
+    onSuccess: invalidate,
+  });
+
+  const imageMut = useMutation({
+    mutationFn: (v: { application_id: string; image_url: string | null }) =>
+      updateImage({ data: { password, ...v } }),
+    onSuccess: invalidate,
+  });
+
+  const durationMut = useMutation({
+    mutationFn: (v: { application_id: string; subscription_duration_days: number }) =>
+      updateDuration({ data: { password, ...v } }),
+    onSuccess: invalidate,
   });
 
   const [editingPriceId, setEditingPriceId] = useState<string | null>(null);
   const [priceDraft, setPriceDraft] = useState<string>("");
+  const [editingDurationId, setEditingDurationId] = useState<string | null>(null);
+  const [durationDraft, setDurationDraft] = useState<string>("");
+  const [editingImageId, setEditingImageId] = useState<string | null>(null);
+  const [imageDraft, setImageDraft] = useState<string>("");
+  const [showCreate, setShowCreate] = useState(false);
 
   const [openAppId, setOpenAppId] = useState<string | null>(null);
+
 
   return (
     <div className="mx-auto max-w-5xl px-4 py-10 sm:px-6">
@@ -163,16 +188,35 @@ function AdminDashboard({
         <div>
           <h1 className="font-display text-2xl sm:text-3xl">Panneau admin</h1>
           <p className="text-sm text-muted-foreground">
-            Active/désactive les produits, ajoute ou retire des slots de stock.
+            Gère le catalogue, les icônes, les prix, la durée d'abonnement et le stock.
           </p>
         </div>
-        <button
-          onClick={onLogout}
-          className="rounded-lg border border-border bg-background px-3 py-1.5 text-xs text-muted-foreground hover:border-primary/40"
-        >
-          Déconnexion
-        </button>
+        <div className="flex items-center gap-2">
+          <button
+            onClick={() => setShowCreate((v) => !v)}
+            className="inline-flex items-center gap-1 rounded-lg bg-gradient-primary px-3 py-1.5 text-xs font-semibold text-primary-foreground shadow-glow"
+          >
+            <Plus className="h-3 w-3" />
+            {showCreate ? "Fermer" : "Nouvelle app"}
+          </button>
+          <button
+            onClick={onLogout}
+            className="rounded-lg border border-border bg-background px-3 py-1.5 text-xs text-muted-foreground hover:border-primary/40"
+          >
+            Déconnexion
+          </button>
+        </div>
       </div>
+
+      {showCreate && (
+        <CreateAppForm
+          password={password}
+          onCreated={() => {
+            invalidate();
+            setShowCreate(false);
+          }}
+        />
+      )}
 
       {isLoading && (
         <div className="mt-10 flex items-center gap-2 text-muted-foreground">
@@ -186,8 +230,29 @@ function AdminDashboard({
             key={a.id}
             className="rounded-xl border border-border bg-surface p-4"
           >
-            <div className="flex flex-wrap items-center justify-between gap-3">
-              <div className="min-w-0">
+            <div className="flex flex-wrap items-start justify-between gap-3">
+              <div className="flex min-w-0 items-start gap-3">
+                <button
+                  type="button"
+                  onClick={() => {
+                    setEditingImageId(a.id);
+                    setImageDraft(a.image_url ?? "");
+                  }}
+                  className="group relative h-12 w-12 shrink-0 overflow-hidden rounded-lg border border-border bg-background"
+                  title="Modifier l'icône"
+                >
+                  {a.image_url ? (
+                    <img src={a.image_url} alt={a.name} className="h-full w-full object-cover" />
+                  ) : (
+                    <div className="flex h-full w-full items-center justify-center text-muted-foreground">
+                      <ImageIcon className="h-5 w-5" />
+                    </div>
+                  )}
+                  <div className="absolute inset-0 flex items-center justify-center bg-background/70 opacity-0 transition group-hover:opacity-100">
+                    <Pencil className="h-3.5 w-3.5 text-primary" />
+                  </div>
+                </button>
+                <div className="min-w-0">
                 <div className="flex items-center gap-2">
                   <span className="font-semibold">{a.name}</span>
                   <span className="rounded-full bg-muted px-2 py-0.5 text-[10px] uppercase tracking-wider text-muted-foreground">
@@ -199,6 +264,51 @@ function AdminDashboard({
                     </span>
                   )}
                 </div>
+                {editingImageId === a.id && (
+                  <form
+                    onSubmit={(e) => {
+                      e.preventDefault();
+                      imageMut.mutate(
+                        { application_id: a.id, image_url: imageDraft.trim() || null },
+                        { onSuccess: () => setEditingImageId(null) },
+                      );
+                    }}
+                    className="mt-2 flex flex-wrap items-center gap-1"
+                  >
+                    <input
+                      type="url"
+                      placeholder="https://… (URL de l'icône)"
+                      value={imageDraft}
+                      onChange={(e) => setImageDraft(e.target.value)}
+                      autoFocus
+                      className="w-64 rounded-md border border-border bg-background px-2 py-1 text-xs"
+                    />
+                    <button
+                      type="submit"
+                      disabled={imageMut.isPending}
+                      className="rounded-md bg-primary/15 p-1 text-primary hover:bg-primary/25 disabled:opacity-50"
+                    >
+                      {imageMut.isPending ? (
+                        <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                      ) : (
+                        <Check className="h-3.5 w-3.5" />
+                      )}
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setEditingImageId(null)}
+                      className="rounded-md border border-border p-1 text-muted-foreground hover:text-foreground"
+                    >
+                      <X className="h-3.5 w-3.5" />
+                    </button>
+                    {imageMut.error && (
+                      <span className="w-full text-xs text-destructive">
+                        {(imageMut.error as Error).message}
+                      </span>
+                    )}
+                  </form>
+                )}
+
                 <div className="mt-1 flex flex-wrap items-center gap-2 text-sm text-muted-foreground">
                   {editingPriceId === a.id ? (
                     <form
@@ -265,9 +375,71 @@ function AdminDashboard({
                     {a.stock_disponible} dispo
                   </span>
                   <span>· {a.stock_vendu} vendus</span>
+                  <span>·</span>
+                  {editingDurationId === a.id ? (
+                    <form
+                      onSubmit={(e) => {
+                        e.preventDefault();
+                        const n = Number(durationDraft);
+                        if (!Number.isFinite(n) || n < 1) return;
+                        durationMut.mutate(
+                          { application_id: a.id, subscription_duration_days: Math.round(n) },
+                          { onSuccess: () => setEditingDurationId(null) },
+                        );
+                      }}
+                      className="flex items-center gap-1"
+                    >
+                      <input
+                        type="number"
+                        min={1}
+                        max={3650}
+                        value={durationDraft}
+                        onChange={(e) => setDurationDraft(e.target.value)}
+                        autoFocus
+                        className="w-20 rounded-md border border-border bg-background px-2 py-1 text-sm"
+                      />
+                      <span className="text-xs">jours</span>
+                      <button
+                        type="submit"
+                        disabled={durationMut.isPending}
+                        className="rounded-md bg-primary/15 p-1 text-primary hover:bg-primary/25 disabled:opacity-50"
+                      >
+                        {durationMut.isPending ? (
+                          <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                        ) : (
+                          <Check className="h-3.5 w-3.5" />
+                        )}
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => setEditingDurationId(null)}
+                        className="rounded-md border border-border p-1 text-muted-foreground hover:text-foreground"
+                      >
+                        <X className="h-3.5 w-3.5" />
+                      </button>
+                    </form>
+                  ) : (
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setEditingDurationId(a.id);
+                        setDurationDraft(String(a.subscription_duration_days));
+                      }}
+                      className="inline-flex items-center gap-1 rounded-md px-1.5 py-0.5 hover:bg-muted"
+                      title="Modifier la durée d'abonnement"
+                    >
+                      <Timer className="h-3 w-3" />
+                      <span className="font-medium text-foreground">
+                        {a.subscription_duration_days} j
+                      </span>
+                      <Pencil className="h-3 w-3 text-muted-foreground" />
+                    </button>
+                  )}
+                </div>
                 </div>
               </div>
               <div className="flex items-center gap-2">
+
                 <button
                   onClick={() =>
                     toggleMut.mutate({
@@ -472,5 +644,111 @@ function StockManager({ appId, password }: { appId: string; password: string }) 
         </div>
       </div>
     </div>
+  );
+}
+
+function CreateAppForm({
+  password,
+  onCreated,
+}: {
+  password: string;
+  onCreated: () => void;
+}) {
+  const create = useServerFn(adminCreateApp);
+  const [form, setForm] = useState({
+    name: "",
+    category: "Streaming",
+    description: "",
+    price_fcfa: 2000,
+    image_url: "",
+    subscription_duration_days: 30,
+  });
+  const mut = useMutation({
+    mutationFn: () =>
+      create({
+        data: {
+          password,
+          name: form.name.trim(),
+          category: form.category.trim(),
+          description: form.description.trim() || null,
+          price_fcfa: Math.round(Number(form.price_fcfa) || 0),
+          image_url: form.image_url.trim() || null,
+          subscription_duration_days: Math.round(Number(form.subscription_duration_days) || 30),
+        },
+      }),
+    onSuccess: onCreated,
+  });
+
+  return (
+    <form
+      onSubmit={(e) => {
+        e.preventDefault();
+        mut.mutate();
+      }}
+      className="mt-4 grid grid-cols-1 gap-2 rounded-xl border border-primary/30 bg-surface p-4 sm:grid-cols-6"
+    >
+      <input
+        required
+        placeholder="Nom de l'app"
+        value={form.name}
+        onChange={(e) => setForm({ ...form, name: e.target.value })}
+        className="rounded-lg border border-border bg-background px-3 py-2 text-sm sm:col-span-3"
+      />
+      <input
+        required
+        placeholder="Catégorie"
+        value={form.category}
+        onChange={(e) => setForm({ ...form, category: e.target.value })}
+        className="rounded-lg border border-border bg-background px-3 py-2 text-sm sm:col-span-3"
+      />
+      <input
+        placeholder="URL de l'icône (https://...)"
+        value={form.image_url}
+        onChange={(e) => setForm({ ...form, image_url: e.target.value })}
+        className="rounded-lg border border-border bg-background px-3 py-2 text-sm sm:col-span-6"
+      />
+      <input
+        type="number"
+        min={0}
+        step={100}
+        required
+        placeholder="Prix FCFA"
+        value={form.price_fcfa}
+        onChange={(e) => setForm({ ...form, price_fcfa: Number(e.target.value) })}
+        className="rounded-lg border border-border bg-background px-3 py-2 text-sm sm:col-span-3"
+      />
+      <input
+        type="number"
+        min={1}
+        max={3650}
+        required
+        placeholder="Durée (jours)"
+        value={form.subscription_duration_days}
+        onChange={(e) =>
+          setForm({ ...form, subscription_duration_days: Number(e.target.value) })
+        }
+        className="rounded-lg border border-border bg-background px-3 py-2 text-sm sm:col-span-3"
+      />
+      <textarea
+        placeholder="Description (optionnel)"
+        value={form.description}
+        onChange={(e) => setForm({ ...form, description: e.target.value })}
+        rows={2}
+        className="rounded-lg border border-border bg-background px-3 py-2 text-sm sm:col-span-6"
+      />
+      <button
+        type="submit"
+        disabled={mut.isPending || !form.name.trim()}
+        className="sm:col-span-6 inline-flex items-center justify-center gap-1 rounded-lg bg-gradient-primary px-3 py-2 text-sm font-semibold text-primary-foreground shadow-glow disabled:opacity-50"
+      >
+        {mut.isPending ? <Loader2 className="h-4 w-4 animate-spin" /> : <Plus className="h-4 w-4" />}
+        Créer l'application
+      </button>
+      {mut.error && (
+        <p className="sm:col-span-6 text-xs text-destructive">
+          {(mut.error as Error).message}
+        </p>
+      )}
+    </form>
   );
 }
