@@ -2,18 +2,22 @@ import { createFileRoute, Link } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
-import { Check, Loader2, Lock, Pencil, Plus, Power, Trash2, X } from "lucide-react";
+import { Check, ImageIcon, Loader2, Lock, Pencil, Plus, Power, Timer, Trash2, X } from "lucide-react";
 import {
   adminAddSlot,
+  adminCreateApp,
   adminDeleteSlot,
   adminListApps,
   adminListSlots,
   adminToggleApp,
+  adminUpdateAppDuration,
+  adminUpdateAppImage,
   adminUpdateAppPrice,
   verifyAdminPassword,
 } from "@/lib/admin.functions";
 import { SiteHeader } from "@/components/SiteHeader";
 import { SiteFooter } from "@/components/SiteFooter";
+
 
 const PWD_KEY = "openslot_admin_pwd";
 
