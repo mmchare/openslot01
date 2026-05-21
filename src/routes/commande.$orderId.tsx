@@ -138,6 +138,12 @@ function OrderTrackingPage() {
                 }
               />
             </div>
+            {(data.subscription_start_at || data.subscription_end_at) && (
+              <SubscriptionPeriod
+                start={data.subscription_start_at}
+                end={data.subscription_end_at}
+              />
+            )}
             <WhatsAppButton
               name={data.client_name}
               phone={data.client_whatsapp}
@@ -149,6 +155,7 @@ function OrderTrackingPage() {
             />
           </div>
         )}
+
 
         {data.status === "paye" && !data.access && (
           <div className="mt-8 rounded-2xl border border-border bg-surface p-6 text-center">
