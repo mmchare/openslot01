@@ -29,11 +29,12 @@ export const adminListApps = createServerFn({ method: "POST" })
     checkPassword(data.password);
     const { data: apps, error } = await supabaseAdmin
       .from("applications")
-      .select("id, name, category, price_fcfa, is_active, sort_order")
+      .select(
+        "id, name, category, price_fcfa, image_url, subscription_duration_days, is_active, sort_order",
+      )
       .order("sort_order", { ascending: true });
     if (error) throw new Error(error.message);
 
-    // Counts par app
     const ids = (apps ?? []).map((a) => a.id);
     const counts: Record<string, { dispo: number; vendu: number }> = {};
     for (const id of ids) counts[id] = { dispo: 0, vendu: 0 };
@@ -55,6 +56,71 @@ export const adminListApps = createServerFn({ method: "POST" })
       stock_vendu: counts[a.id]?.vendu ?? 0,
     }));
   });
+
+export const adminCreateApp = createServerFn({ method: "POST" })
+  .inputValidator((input) =>
+    PasswordOnly.extend({
+      name: z.string().min(1).max(100),
+      category: z.string().min(1).max(50),
+      description: z.string().max(1000).optional().nullable(),
+      price_fcfa: z.number().int().min(0).max(10_000_000),
+      image_url: z.string().url().max(500).optional().nullable(),
+      subscription_duration_days: z.number().int().min(1).max(3650),
+    }).parse(input),
+  )
+  .handler(async ({ data }) => {
+    checkPassword(data.password);
+    const { error } = await supabaseAdmin.from("applications").insert({
+      name: data.name,
+      category: data.category,
+      description: data.description || null,
+      price_fcfa: data.price_fcfa,
+      image_url: data.image_url || null,
+      subscription_duration_days: data.subscription_duration_days,
+      is_active: true,
+    });
+    if (error) throw new Error(error.message);
+    return { ok: true };
+  });
+
+export const adminUpdateAppImage = createServerFn({ method: "POST" })
+  .inputValidator((input) =>
+    PasswordOnly.extend({
+      application_id: z.string().uuid(),
+      image_url: z.string().max(500).nullable(),
+    }).parse(input),
+  )
+  .handler(async ({ data }) => {
+    checkPassword(data.password);
+    const url = data.image_url?.trim() || null;
+    if (url && !/^https?:\/\//i.test(url)) {
+      throw new Error("L'URL de l'icône doit commencer par http(s)://");
+    }
+    const { error } = await supabaseAdmin
+      .from("applications")
+      .update({ image_url: url })
+      .eq("id", data.application_id);
+    if (error) throw new Error(error.message);
+    return { ok: true };
+  });
+
+export const adminUpdateAppDuration = createServerFn({ method: "POST" })
+  .inputValidator((input) =>
+    PasswordOnly.extend({
+      application_id: z.string().uuid(),
+      subscription_duration_days: z.number().int().min(1).max(3650),
+    }).parse(input),
+  )
+  .handler(async ({ data }) => {
+    checkPassword(data.password);
+    const { error } = await supabaseAdmin
+      .from("applications")
+      .update({ subscription_duration_days: data.subscription_duration_days })
+      .eq("id", data.application_id);
+    if (error) throw new Error(error.message);
+    return { ok: true };
+  });
+
 
 export const adminToggleApp = createServerFn({ method: "POST" })
   .inputValidator((input) =>
