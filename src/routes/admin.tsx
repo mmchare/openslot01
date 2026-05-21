@@ -127,6 +127,7 @@ function AdminDashboard({
   const qc = useQueryClient();
   const listApps = useServerFn(adminListApps);
   const toggleApp = useServerFn(adminToggleApp);
+  const updatePrice = useServerFn(adminUpdateAppPrice);
 
   const { data: apps, isLoading, error } = useQuery({
     queryKey: ["admin-apps"],
