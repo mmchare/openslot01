@@ -132,6 +132,8 @@ function AdminDashboard({
   const listApps = useServerFn(adminListApps);
   const toggleApp = useServerFn(adminToggleApp);
   const updatePrice = useServerFn(adminUpdateAppPrice);
+  const updateImage = useServerFn(adminUpdateAppImage);
+  const updateDuration = useServerFn(adminUpdateAppDuration);
 
   const { data: apps, isLoading, error } = useQuery({
     queryKey: ["admin-apps"],
@@ -139,27 +141,46 @@ function AdminDashboard({
     retry: false,
   });
 
-  // Si erreur d'auth → déconnexion auto
   useEffect(() => {
     if (error) onLogout();
   }, [error, onLogout]);
 
+  const invalidate = () => qc.invalidateQueries({ queryKey: ["admin-apps"] });
+
   const toggleMut = useMutation({
     mutationFn: (v: { application_id: string; is_active: boolean }) =>
       toggleApp({ data: { password, ...v } }),
-    onSuccess: () => qc.invalidateQueries({ queryKey: ["admin-apps"] }),
+    onSuccess: invalidate,
   });
 
   const priceMut = useMutation({
     mutationFn: (v: { application_id: string; price_fcfa: number }) =>
       updatePrice({ data: { password, ...v } }),
-    onSuccess: () => qc.invalidateQueries({ queryKey: ["admin-apps"] }),
+    onSuccess: invalidate,
+  });
+
+  const imageMut = useMutation({
+    mutationFn: (v: { application_id: string; image_url: string | null }) =>
+      updateImage({ data: { password, ...v } }),
+    onSuccess: invalidate,
+  });
+
+  const durationMut = useMutation({
+    mutationFn: (v: { application_id: string; subscription_duration_days: number }) =>
+      updateDuration({ data: { password, ...v } }),
+    onSuccess: invalidate,
   });
 
   const [editingPriceId, setEditingPriceId] = useState<string | null>(null);
   const [priceDraft, setPriceDraft] = useState<string>("");
+  const [editingDurationId, setEditingDurationId] = useState<string | null>(null);
+  const [durationDraft, setDurationDraft] = useState<string>("");
+  const [editingImageId, setEditingImageId] = useState<string | null>(null);
+  const [imageDraft, setImageDraft] = useState<string>("");
+  const [showCreate, setShowCreate] = useState(false);
 
   const [openAppId, setOpenAppId] = useState<string | null>(null);
+
 
   return (
     <div className="mx-auto max-w-5xl px-4 py-10 sm:px-6">
