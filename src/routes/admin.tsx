@@ -375,9 +375,71 @@ function AdminDashboard({
                     {a.stock_disponible} dispo
                   </span>
                   <span>· {a.stock_vendu} vendus</span>
+                  <span>·</span>
+                  {editingDurationId === a.id ? (
+                    <form
+                      onSubmit={(e) => {
+                        e.preventDefault();
+                        const n = Number(durationDraft);
+                        if (!Number.isFinite(n) || n < 1) return;
+                        durationMut.mutate(
+                          { application_id: a.id, subscription_duration_days: Math.round(n) },
+                          { onSuccess: () => setEditingDurationId(null) },
+                        );
+                      }}
+                      className="flex items-center gap-1"
+                    >
+                      <input
+                        type="number"
+                        min={1}
+                        max={3650}
+                        value={durationDraft}
+                        onChange={(e) => setDurationDraft(e.target.value)}
+                        autoFocus
+                        className="w-20 rounded-md border border-border bg-background px-2 py-1 text-sm"
+                      />
+                      <span className="text-xs">jours</span>
+                      <button
+                        type="submit"
+                        disabled={durationMut.isPending}
+                        className="rounded-md bg-primary/15 p-1 text-primary hover:bg-primary/25 disabled:opacity-50"
+                      >
+                        {durationMut.isPending ? (
+                          <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                        ) : (
+                          <Check className="h-3.5 w-3.5" />
+                        )}
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => setEditingDurationId(null)}
+                        className="rounded-md border border-border p-1 text-muted-foreground hover:text-foreground"
+                      >
+                        <X className="h-3.5 w-3.5" />
+                      </button>
+                    </form>
+                  ) : (
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setEditingDurationId(a.id);
+                        setDurationDraft(String(a.subscription_duration_days));
+                      }}
+                      className="inline-flex items-center gap-1 rounded-md px-1.5 py-0.5 hover:bg-muted"
+                      title="Modifier la durée d'abonnement"
+                    >
+                      <Timer className="h-3 w-3" />
+                      <span className="font-medium text-foreground">
+                        {a.subscription_duration_days} j
+                      </span>
+                      <Pencil className="h-3 w-3 text-muted-foreground" />
+                    </button>
+                  )}
+                </div>
                 </div>
               </div>
               <div className="flex items-center gap-2">
+
                 <button
                   onClick={() =>
                     toggleMut.mutate({
