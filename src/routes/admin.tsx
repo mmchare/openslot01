@@ -580,7 +580,7 @@ function StockManager({ appId, password }: { appId: string; password: string }) 
         <button
           type="submit"
           disabled={addMut.isPending}
-          className="sm:col-span-5 inline-flex items-center justify-center gap-1 rounded-lg bg-primary/15 px-3 py-2 text-sm font-semibold text-primary hover:bg-primary/25 disabled:opacity-50"
+          className="sm:col-span-6 inline-flex items-center justify-center gap-1 rounded-lg bg-primary/15 px-3 py-2 text-sm font-semibold text-primary hover:bg-primary/25 disabled:opacity-50"
         >
           {addMut.isPending ? (
             <Loader2 className="h-4 w-4 animate-spin" />
@@ -590,7 +590,7 @@ function StockManager({ appId, password }: { appId: string; password: string }) 
           Ajouter ce slot
         </button>
         {addMut.error && (
-          <p className="text-xs text-destructive sm:col-span-5">
+          <p className="text-xs text-destructive sm:col-span-6">
             {(addMut.error as Error).message}
           </p>
         )}
