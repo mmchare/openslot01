@@ -762,3 +762,93 @@ function CreateAppForm({
     </form>
   );
 }
+
+function IconUpload({
+  password,
+  applicationId,
+  currentUrl,
+  onUploaded,
+}: {
+  password: string;
+  applicationId?: string | null;
+  currentUrl?: string | null;
+  onUploaded: (url: string) => void;
+}) {
+  const upload = useServerFn(adminUploadAppImage);
+  const [error, setError] = useState<string | null>(null);
+  const [pending, setPending] = useState(false);
+
+  const handleFile = async (file: File) => {
+    setError(null);
+    if (!file.type.startsWith("image/")) {
+      setError("Veuillez choisir un fichier image.");
+      return;
+    }
+    if (file.size > 3 * 1024 * 1024) {
+      setError("Image trop lourde (max 3 Mo).");
+      return;
+    }
+    setPending(true);
+    try {
+      const buf = await file.arrayBuffer();
+      const bytes = new Uint8Array(buf);
+      let bin = "";
+      const chunk = 0x8000;
+      for (let i = 0; i < bytes.length; i += chunk) {
+        bin += String.fromCharCode(...bytes.subarray(i, i + chunk));
+      }
+      const data_base64 = btoa(bin);
+      const res = await upload({
+        data: {
+          password,
+          application_id: applicationId ?? null,
+          file_name: file.name,
+          content_type: file.type,
+          data_base64,
+        },
+      });
+      onUploaded(res.image_url);
+    } catch (e) {
+      setError((e as Error).message);
+    } finally {
+      setPending(false);
+    }
+  };
+
+  return (
+    <div className="flex flex-wrap items-center gap-2">
+      {currentUrl ? (
+        <img
+          src={currentUrl}
+          alt="Aperçu icône"
+          className="h-10 w-10 rounded-md border border-border object-cover"
+        />
+      ) : (
+        <div className="flex h-10 w-10 items-center justify-center rounded-md border border-dashed border-border text-muted-foreground">
+          <ImageIcon className="h-4 w-4" />
+        </div>
+      )}
+      <label className="inline-flex cursor-pointer items-center gap-1 rounded-md border border-border bg-background px-2 py-1 text-xs hover:border-primary/40">
+        {pending ? (
+          <Loader2 className="h-3.5 w-3.5 animate-spin" />
+        ) : (
+          <Upload className="h-3.5 w-3.5" />
+        )}
+        {pending ? "Envoi…" : "Téléverser une image"}
+        <input
+          type="file"
+          accept="image/*"
+          className="hidden"
+          disabled={pending}
+          onChange={(e) => {
+            const f = e.target.files?.[0];
+            if (f) handleFile(f);
+            e.target.value = "";
+          }}
+        />
+      </label>
+      {error && <span className="w-full text-xs text-destructive">{error}</span>}
+    </div>
+  );
+}
+
