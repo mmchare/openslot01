@@ -181,6 +181,7 @@ export const adminAddSlot = createServerFn({ method: "POST" })
       account_password: z.string().min(1).max(255),
       slot_number: z.number().int().min(1).max(20),
       profile_name: z.string().max(100).optional().nullable(),
+      profile_password: z.string().max(255).optional().nullable(),
     }).parse(input),
   )
   .handler(async ({ data }) => {
@@ -191,6 +192,7 @@ export const adminAddSlot = createServerFn({ method: "POST" })
       account_password: data.account_password,
       slot_number: data.slot_number,
       profile_name: data.profile_name || null,
+      profile_password: data.profile_password || null,
       status: "disponible",
     });
     if (error) throw new Error(error.message);
