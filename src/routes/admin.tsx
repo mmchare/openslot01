@@ -532,25 +532,26 @@ function StockManager({ appId, password }: { appId: string; password: string }) 
             account_password: form.account_password,
             slot_number: Number(form.slot_number),
             profile_name: form.profile_name.trim() || null,
+            profile_password: form.profile_password.trim() || null,
           });
         }}
-        className="grid grid-cols-1 gap-2 sm:grid-cols-5"
+        className="grid grid-cols-1 gap-2 sm:grid-cols-6"
       >
         <input
           required
           placeholder="Email du compte"
           value={form.account_email}
           onChange={(e) => setForm({ ...form, account_email: e.target.value })}
-          className="rounded-lg border border-border bg-background px-3 py-2 text-sm sm:col-span-2"
+          className="rounded-lg border border-border bg-background px-3 py-2 text-sm sm:col-span-3"
         />
         <input
           required
-          placeholder="Mot de passe"
+          placeholder="Mot de passe du compte"
           value={form.account_password}
           onChange={(e) =>
             setForm({ ...form, account_password: e.target.value })
           }
-          className="rounded-lg border border-border bg-background px-3 py-2 text-sm"
+          className="rounded-lg border border-border bg-background px-3 py-2 text-sm sm:col-span-3"
         />
         <input
           required
@@ -562,13 +563,19 @@ function StockManager({ appId, password }: { appId: string; password: string }) 
           onChange={(e) =>
             setForm({ ...form, slot_number: Number(e.target.value) })
           }
-          className="rounded-lg border border-border bg-background px-3 py-2 text-sm"
+          className="rounded-lg border border-border bg-background px-3 py-2 text-sm sm:col-span-2"
         />
         <input
-          placeholder="Profil (optionnel)"
+          placeholder="Nom du profil (optionnel)"
           value={form.profile_name}
           onChange={(e) => setForm({ ...form, profile_name: e.target.value })}
-          className="rounded-lg border border-border bg-background px-3 py-2 text-sm"
+          className="rounded-lg border border-border bg-background px-3 py-2 text-sm sm:col-span-2"
+        />
+        <input
+          placeholder="Code/PIN du profil (optionnel)"
+          value={form.profile_password}
+          onChange={(e) => setForm({ ...form, profile_password: e.target.value })}
+          className="rounded-lg border border-border bg-background px-3 py-2 text-sm sm:col-span-2"
         />
         <button
           type="submit"
