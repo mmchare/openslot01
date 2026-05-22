@@ -22,6 +22,7 @@ export interface OrderSuccessPayload {
     password: string;
     slot_number: number;
     profile_name: string | null;
+    profile_password: string | null;
   };
 }
 
