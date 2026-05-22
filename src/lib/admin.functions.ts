@@ -104,6 +104,45 @@ export const adminUpdateAppImage = createServerFn({ method: "POST" })
     return { ok: true };
   });
 
+export const adminUploadAppImage = createServerFn({ method: "POST" })
+  .inputValidator((input) =>
+    PasswordOnly.extend({
+      application_id: z.string().uuid().optional().nullable(),
+      file_name: z.string().min(1).max(255),
+      content_type: z.string().min(1).max(100),
+      // base64 sans préfixe data:
+      data_base64: z.string().min(1).max(4_000_000), // ~3 MB binaire
+    }).parse(input),
+  )
+  .handler(async ({ data }) => {
+    checkPassword(data.password);
+    if (!data.content_type.startsWith("image/")) {
+      throw new Error("Le fichier doit être une image.");
+    }
+    const ext = (data.file_name.split(".").pop() || "png")
+      .toLowerCase()
+      .replace(/[^a-z0-9]/g, "")
+      .slice(0, 5) || "png";
+    const path = `${crypto.randomUUID()}.${ext}`;
+    const bytes = Buffer.from(data.data_base64, "base64");
+    const { error: upErr } = await supabaseAdmin.storage
+      .from("app-icons")
+      .upload(path, bytes, { contentType: data.content_type, upsert: false });
+    if (upErr) throw new Error(upErr.message);
+    const { data: pub } = supabaseAdmin.storage
+      .from("app-icons")
+      .getPublicUrl(path);
+    const publicUrl = pub.publicUrl;
+    if (data.application_id) {
+      const { error } = await supabaseAdmin
+        .from("applications")
+        .update({ image_url: publicUrl })
+        .eq("id", data.application_id);
+      if (error) throw new Error(error.message);
+    }
+    return { ok: true, image_url: publicUrl };
+  });
+
 export const adminUpdateAppDuration = createServerFn({ method: "POST" })
   .inputValidator((input) =>
     PasswordOnly.extend({
