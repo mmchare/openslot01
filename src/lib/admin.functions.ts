@@ -165,7 +165,7 @@ export const adminListSlots = createServerFn({ method: "POST" })
     const { data: slots, error } = await supabaseAdmin
       .from("slots_stock")
       .select(
-        "id, account_email, slot_number, profile_name, status, created_at",
+        "id, account_email, slot_number, profile_name, profile_password, status, created_at",
       )
       .eq("application_id", data.application_id)
       .order("created_at", { ascending: false });
