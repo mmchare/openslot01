@@ -143,6 +143,9 @@ function SuccessPage() {
                   : `Écran ${a.slot_number}`
               }
             />
+            {a.profile_password && (
+              <AccessRow label="Code / PIN du profil" value={a.profile_password} />
+            )}
           </div>
 
           <a
