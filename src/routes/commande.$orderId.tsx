@@ -295,18 +295,61 @@ function SubscriptionPeriod({
           year: "numeric",
         })
       : "—";
-  const daysLeft = (() => {
-    if (!end) return null;
-    const ms = new Date(end).getTime() - Date.now();
-    return Math.max(0, Math.ceil(ms / (1000 * 60 * 60 * 24)));
-  })();
-  const expired = end ? new Date(end).getTime() < Date.now() : false;
+  const now = Date.now();
+  const endMs = end ? new Date(end).getTime() : null;
+  const expired = endMs !== null && endMs < now;
+  const daysLeft =
+    endMs === null ? null : Math.max(0, Math.ceil((endMs - now) / 86_400_000));
+
   return (
-    <div className="mt-5 rounded-xl border border-border bg-surface p-4">
-      <div className="text-xs uppercase tracking-wider text-muted-foreground">
-        Période d'abonnement
+    <div
+      className={`mt-5 rounded-xl border p-4 ${
+        expired
+          ? "border-destructive/40 bg-destructive/5"
+          : "border-primary/30 bg-primary/5"
+      }`}
+    >
+      <div className="flex items-center justify-between gap-3">
+        <div className="text-xs uppercase tracking-wider text-muted-foreground">
+          Abonnement
+        </div>
+        <span
+          className={`inline-flex items-center gap-1 rounded-full px-2.5 py-1 text-[11px] font-semibold uppercase tracking-wider ${
+            expired
+              ? "bg-destructive/15 text-destructive"
+              : "bg-primary/15 text-primary"
+          }`}
+        >
+          {expired ? (
+            <>
+              <XCircle className="h-3 w-3" /> Expirée
+            </>
+          ) : (
+            <>
+              <CheckCircle2 className="h-3 w-3" /> Active
+            </>
+          )}
+        </span>
       </div>
-      <div className="mt-2 grid grid-cols-1 gap-2 sm:grid-cols-2">
+
+      {daysLeft !== null && (
+        <div className="mt-3 flex items-baseline gap-2">
+          <span
+            className={`font-display text-4xl font-semibold ${
+              expired ? "text-destructive" : "text-primary"
+            }`}
+          >
+            {expired ? 0 : daysLeft}
+          </span>
+          <span className="text-sm text-muted-foreground">
+            {expired
+              ? "jour restant — accès terminé"
+              : `jour${daysLeft > 1 ? "s" : ""} restant${daysLeft > 1 ? "s" : ""}`}
+          </span>
+        </div>
+      )}
+
+      <div className="mt-3 grid grid-cols-1 gap-2 sm:grid-cols-2">
         <div className="flex items-center gap-2 text-sm">
           <CalendarCheck className="h-4 w-4 text-primary" />
           <span className="text-muted-foreground">Début :</span>
@@ -320,15 +363,6 @@ function SubscriptionPeriod({
           <span className="font-medium">{fmt(end)}</span>
         </div>
       </div>
-      {daysLeft !== null && (
-        <p
-          className={`mt-2 text-xs ${expired ? "text-destructive" : "text-muted-foreground"}`}
-        >
-          {expired
-            ? "Abonnement expiré."
-            : `Il reste ${daysLeft} jour${daysLeft > 1 ? "s" : ""}.`}
-        </p>
-      )}
     </div>
   );
 }
