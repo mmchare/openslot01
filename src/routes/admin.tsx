@@ -501,10 +501,11 @@ function StockManager({ appId, password }: { appId: string; password: string }) 
       account_password: string;
       slot_number: number;
       profile_name: string | null;
+      profile_password: string | null;
     }) => addSlot({ data: { password, application_id: appId, ...v } }),
     onSuccess: () => {
       refresh();
-      setForm({ account_email: "", account_password: "", slot_number: 1, profile_name: "" });
+      setForm({ account_email: "", account_password: "", slot_number: 1, profile_name: "", profile_password: "" });
     },
   });
 
@@ -518,6 +519,7 @@ function StockManager({ appId, password }: { appId: string; password: string }) 
     account_password: "",
     slot_number: 1,
     profile_name: "",
+    profile_password: "",
   });
 
   return (
