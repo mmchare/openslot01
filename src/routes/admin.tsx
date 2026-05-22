@@ -266,48 +266,59 @@ function AdminDashboard({
                   )}
                 </div>
                 {editingImageId === a.id && (
-                  <form
-                    onSubmit={(e) => {
-                      e.preventDefault();
-                      imageMut.mutate(
-                        { application_id: a.id, image_url: imageDraft.trim() || null },
-                        { onSuccess: () => setEditingImageId(null) },
-                      );
-                    }}
-                    className="mt-2 flex flex-wrap items-center gap-1"
-                  >
-                    <input
-                      type="url"
-                      placeholder="https://… (URL de l'icône)"
-                      value={imageDraft}
-                      onChange={(e) => setImageDraft(e.target.value)}
-                      autoFocus
-                      className="w-64 rounded-md border border-border bg-background px-2 py-1 text-xs"
+                  <div className="mt-2 space-y-2">
+                    <IconUpload
+                      password={password}
+                      applicationId={a.id}
+                      currentUrl={imageDraft || a.image_url || null}
+                      onUploaded={(url) => {
+                        setImageDraft(url);
+                        qc.invalidateQueries({ queryKey: ["admin-apps"] });
+                        setEditingImageId(null);
+                      }}
                     />
-                    <button
-                      type="submit"
-                      disabled={imageMut.isPending}
-                      className="rounded-md bg-primary/15 p-1 text-primary hover:bg-primary/25 disabled:opacity-50"
+                    <form
+                      onSubmit={(e) => {
+                        e.preventDefault();
+                        imageMut.mutate(
+                          { application_id: a.id, image_url: imageDraft.trim() || null },
+                          { onSuccess: () => setEditingImageId(null) },
+                        );
+                      }}
+                      className="flex flex-wrap items-center gap-1"
                     >
-                      {imageMut.isPending ? (
-                        <Loader2 className="h-3.5 w-3.5 animate-spin" />
-                      ) : (
-                        <Check className="h-3.5 w-3.5" />
+                      <input
+                        type="url"
+                        placeholder="…ou coller une URL https://"
+                        value={imageDraft}
+                        onChange={(e) => setImageDraft(e.target.value)}
+                        className="w-64 rounded-md border border-border bg-background px-2 py-1 text-xs"
+                      />
+                      <button
+                        type="submit"
+                        disabled={imageMut.isPending}
+                        className="rounded-md bg-primary/15 p-1 text-primary hover:bg-primary/25 disabled:opacity-50"
+                      >
+                        {imageMut.isPending ? (
+                          <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                        ) : (
+                          <Check className="h-3.5 w-3.5" />
+                        )}
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => setEditingImageId(null)}
+                        className="rounded-md border border-border p-1 text-muted-foreground hover:text-foreground"
+                      >
+                        <X className="h-3.5 w-3.5" />
+                      </button>
+                      {imageMut.error && (
+                        <span className="w-full text-xs text-destructive">
+                          {(imageMut.error as Error).message}
+                        </span>
                       )}
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => setEditingImageId(null)}
-                      className="rounded-md border border-border p-1 text-muted-foreground hover:text-foreground"
-                    >
-                      <X className="h-3.5 w-3.5" />
-                    </button>
-                    {imageMut.error && (
-                      <span className="w-full text-xs text-destructive">
-                        {(imageMut.error as Error).message}
-                      </span>
-                    )}
-                  </form>
+                    </form>
+                  </div>
                 )}
 
                 <div className="mt-1 flex flex-wrap items-center gap-2 text-sm text-muted-foreground">
