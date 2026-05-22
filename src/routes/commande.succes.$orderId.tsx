@@ -105,7 +105,7 @@ function SuccessPage() {
   // Succès — affiche les accès
   const a = data.access;
   const waText = encodeURIComponent(
-    `Bonjour ${data.client_name}, voici vos accès OpenSlot pour ${data.application_name} : Email: ${a.email} | Pass: ${a.password} | Profil: Écran ${a.slot_number}${a.profile_name ? ` (${a.profile_name})` : ""}. Merci pour votre confiance !`,
+    `Bonjour ${data.client_name}, voici vos accès OpenSlot pour ${data.application_name} : Email: ${a.email} | Pass: ${a.password} | Profil: Écran ${a.slot_number}${a.profile_name ? ` (${a.profile_name})` : ""}${a.profile_password ? ` | Code profil: ${a.profile_password}` : ""}. Merci pour votre confiance !`,
   );
   const waPhone = data.client_whatsapp.replace(/[^0-9]/g, "");
   const waLink = `https://wa.me/${waPhone}?text=${waText}`;
@@ -143,6 +143,9 @@ function SuccessPage() {
                   : `Écran ${a.slot_number}`
               }
             />
+            {a.profile_password && (
+              <AccessRow label="Code / PIN du profil" value={a.profile_password} />
+            )}
           </div>
 
           <a

@@ -131,6 +131,7 @@ export type Database = {
           created_at: string
           id: string
           profile_name: string | null
+          profile_password: string | null
           slot_number: number
           status: Database["public"]["Enums"]["slot_status"]
           updated_at: string
@@ -142,6 +143,7 @@ export type Database = {
           created_at?: string
           id?: string
           profile_name?: string | null
+          profile_password?: string | null
           slot_number: number
           status?: Database["public"]["Enums"]["slot_status"]
           updated_at?: string
@@ -153,6 +155,7 @@ export type Database = {
           created_at?: string
           id?: string
           profile_name?: string | null
+          profile_password?: string | null
           slot_number?: number
           status?: Database["public"]["Enums"]["slot_status"]
           updated_at?: string
@@ -218,6 +221,7 @@ export type Database = {
           account_password: string
           application_name: string
           profile_name: string
+          profile_password: string
           remaining_stock: number
           slot_id: string
           slot_number: number

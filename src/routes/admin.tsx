@@ -501,10 +501,11 @@ function StockManager({ appId, password }: { appId: string; password: string }) 
       account_password: string;
       slot_number: number;
       profile_name: string | null;
+      profile_password: string | null;
     }) => addSlot({ data: { password, application_id: appId, ...v } }),
     onSuccess: () => {
       refresh();
-      setForm({ account_email: "", account_password: "", slot_number: 1, profile_name: "" });
+      setForm({ account_email: "", account_password: "", slot_number: 1, profile_name: "", profile_password: "" });
     },
   });
 
@@ -518,6 +519,7 @@ function StockManager({ appId, password }: { appId: string; password: string }) 
     account_password: "",
     slot_number: 1,
     profile_name: "",
+    profile_password: "",
   });
 
   return (
@@ -530,25 +532,26 @@ function StockManager({ appId, password }: { appId: string; password: string }) 
             account_password: form.account_password,
             slot_number: Number(form.slot_number),
             profile_name: form.profile_name.trim() || null,
+            profile_password: form.profile_password.trim() || null,
           });
         }}
-        className="grid grid-cols-1 gap-2 sm:grid-cols-5"
+        className="grid grid-cols-1 gap-2 sm:grid-cols-6"
       >
         <input
           required
           placeholder="Email du compte"
           value={form.account_email}
           onChange={(e) => setForm({ ...form, account_email: e.target.value })}
-          className="rounded-lg border border-border bg-background px-3 py-2 text-sm sm:col-span-2"
+          className="rounded-lg border border-border bg-background px-3 py-2 text-sm sm:col-span-3"
         />
         <input
           required
-          placeholder="Mot de passe"
+          placeholder="Mot de passe du compte"
           value={form.account_password}
           onChange={(e) =>
             setForm({ ...form, account_password: e.target.value })
           }
-          className="rounded-lg border border-border bg-background px-3 py-2 text-sm"
+          className="rounded-lg border border-border bg-background px-3 py-2 text-sm sm:col-span-3"
         />
         <input
           required
@@ -560,18 +563,24 @@ function StockManager({ appId, password }: { appId: string; password: string }) 
           onChange={(e) =>
             setForm({ ...form, slot_number: Number(e.target.value) })
           }
-          className="rounded-lg border border-border bg-background px-3 py-2 text-sm"
+          className="rounded-lg border border-border bg-background px-3 py-2 text-sm sm:col-span-2"
         />
         <input
-          placeholder="Profil (optionnel)"
+          placeholder="Nom du profil (optionnel)"
           value={form.profile_name}
           onChange={(e) => setForm({ ...form, profile_name: e.target.value })}
-          className="rounded-lg border border-border bg-background px-3 py-2 text-sm"
+          className="rounded-lg border border-border bg-background px-3 py-2 text-sm sm:col-span-2"
+        />
+        <input
+          placeholder="Code/PIN du profil (optionnel)"
+          value={form.profile_password}
+          onChange={(e) => setForm({ ...form, profile_password: e.target.value })}
+          className="rounded-lg border border-border bg-background px-3 py-2 text-sm sm:col-span-2"
         />
         <button
           type="submit"
           disabled={addMut.isPending}
-          className="sm:col-span-5 inline-flex items-center justify-center gap-1 rounded-lg bg-primary/15 px-3 py-2 text-sm font-semibold text-primary hover:bg-primary/25 disabled:opacity-50"
+          className="sm:col-span-6 inline-flex items-center justify-center gap-1 rounded-lg bg-primary/15 px-3 py-2 text-sm font-semibold text-primary hover:bg-primary/25 disabled:opacity-50"
         >
           {addMut.isPending ? (
             <Loader2 className="h-4 w-4 animate-spin" />
@@ -581,7 +590,7 @@ function StockManager({ appId, password }: { appId: string; password: string }) 
           Ajouter ce slot
         </button>
         {addMut.error && (
-          <p className="text-xs text-destructive sm:col-span-5">
+          <p className="text-xs text-destructive sm:col-span-6">
             {(addMut.error as Error).message}
           </p>
         )}

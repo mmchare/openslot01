@@ -106,7 +106,7 @@ export const getOrderForSuccess = createServerFn({ method: "GET" })
     if (order.slot_id) {
       const { data: slot } = await supabaseAdmin
         .from("slots_stock")
-        .select("account_email, account_password, slot_number, profile_name")
+        .select("account_email, account_password, slot_number, profile_name, profile_password")
         .eq("id", order.slot_id)
         .maybeSingle();
       if (slot) {
@@ -115,6 +115,7 @@ export const getOrderForSuccess = createServerFn({ method: "GET" })
           password: slot.account_password,
           slot_number: slot.slot_number,
           profile_name: slot.profile_name,
+          profile_password: slot.profile_password,
         };
       }
     }

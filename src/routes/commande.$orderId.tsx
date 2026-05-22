@@ -140,6 +140,12 @@ function OrderTrackingPage() {
                     : `Écran ${data.access.slot_number}`
                 }
               />
+              {data.access.profile_password && (
+                <AccessRow
+                  label="Code / PIN du profil"
+                  value={data.access.profile_password}
+                />
+              )}
             </div>
             {(data.subscription_start_at || data.subscription_end_at) && (
               <SubscriptionPeriod
