@@ -722,12 +722,20 @@ function CreateAppForm({
         onChange={(e) => setForm({ ...form, category: e.target.value })}
         className="rounded-lg border border-border bg-background px-3 py-2 text-sm sm:col-span-3"
       />
-      <input
-        placeholder="URL de l'icône (https://...)"
-        value={form.image_url}
-        onChange={(e) => setForm({ ...form, image_url: e.target.value })}
-        className="rounded-lg border border-border bg-background px-3 py-2 text-sm sm:col-span-6"
-      />
+      <div className="sm:col-span-6 space-y-2 rounded-lg border border-border bg-background px-3 py-2">
+        <span className="text-xs font-medium text-muted-foreground">Icône de l'app</span>
+        <IconUpload
+          password={password}
+          currentUrl={form.image_url || null}
+          onUploaded={(url) => setForm({ ...form, image_url: url })}
+        />
+        <input
+          placeholder="…ou coller une URL https://"
+          value={form.image_url}
+          onChange={(e) => setForm({ ...form, image_url: e.target.value })}
+          className="w-full rounded-lg border border-border bg-background px-3 py-2 text-sm"
+        />
+      </div>
       <input
         type="number"
         min={0}
