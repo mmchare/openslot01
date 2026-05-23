@@ -26,9 +26,6 @@ interface AppIconProps {
 }
 
 export function AppIcon({ slug, size = "md" }: AppIconProps) {
-  const entry = (slug && map[slug]) || { icon: Box, gradient: "from-slate-500 to-slate-700" };
-  const Icon = entry.icon;
-
   const dims =
     size === "lg"
       ? "h-14 w-14 rounded-2xl"
@@ -36,6 +33,25 @@ export function AppIcon({ slug, size = "md" }: AppIconProps) {
         ? "h-9 w-9 rounded-lg"
         : "h-12 w-12 rounded-xl";
   const iconDims = size === "lg" ? "h-7 w-7" : size === "sm" ? "h-4 w-4" : "h-6 w-6";
+
+  // If slug is an actual image URL (uploaded icon), render it
+  if (slug && /^https?:\/\//i.test(slug)) {
+    return (
+      <div
+        className={`${dims} overflow-hidden bg-surface flex items-center justify-center shadow-card`}
+      >
+        <img
+          src={slug}
+          alt=""
+          className="h-full w-full object-cover"
+          loading="lazy"
+        />
+      </div>
+    );
+  }
+
+  const entry = (slug && map[slug]) || { icon: Box, gradient: "from-slate-500 to-slate-700" };
+  const Icon = entry.icon;
 
   return (
     <div
