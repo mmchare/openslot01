@@ -8,8 +8,6 @@ import { defineConfig } from "@lovable.dev/vite-tanstack-config";
 
 export default defineConfig({
   tanstackStart: {
-    // On désactive le SSR pour que Vercel serve l'application comme une SPA classique
-    ssr: false,
     server: { entry: "server" },
   },
 });
