@@ -85,7 +85,9 @@ function SuccessPage() {
     );
   }
 
-  if (data.status !== "paye" || !data.access) {
+  const isApk = data.product_type === "apk";
+
+  if (data.status !== "paye" || (!isApk && !data.access)) {
     return (
       <div className="min-h-screen">
         <SiteHeader />
@@ -107,11 +109,15 @@ function SuccessPage() {
     );
   }
 
-  // Succès — affiche les accès
+  // Succès — affiche les accès (compte) ou le téléchargement (APK)
   const a = data.access;
-  const waText = encodeURIComponent(
-    `Bonjour ${data.client_name}, voici vos accès OpenSlot pour ${data.application_name} : Email: ${a.email} | Pass: ${a.password} | Profil: Écran ${a.slot_number}${a.profile_name ? ` (${a.profile_name})` : ""}${a.profile_password ? ` | Code profil: ${a.profile_password}` : ""}. Merci pour votre confiance !`,
-  );
+  const waText = a
+    ? encodeURIComponent(
+        `Bonjour ${data.client_name}, voici vos accès OpenSlot pour ${data.application_name} : Email: ${a.email} | Pass: ${a.password} | Profil: Écran ${a.slot_number}${a.profile_name ? ` (${a.profile_name})` : ""}${a.profile_password ? ` | Code profil: ${a.profile_password}` : ""}. Merci pour votre confiance !`,
+      )
+    : encodeURIComponent(
+        `Bonjour ${data.client_name}, ma commande OpenSlot pour ${data.application_name} est confirmée. J'ai besoin d'aide.`,
+      );
   const waPhone = data.client_whatsapp.replace(/[^0-9]/g, "");
   const waLink = `https://wa.me/${waPhone}?text=${waText}`;
 
