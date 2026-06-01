@@ -30,7 +30,7 @@ export const adminListApps = createServerFn({ method: "POST" })
     const { data: apps, error } = await supabaseAdmin
       .from("applications")
       .select(
-        "id, name, category, price_fcfa, image_url, subscription_duration_days, is_active, sort_order",
+        "id, name, category, price_fcfa, image_url, subscription_duration_days, is_active, sort_order, product_type, apk_file_path, apk_version, apk_size_bytes",
       )
       .order("sort_order", { ascending: true });
     if (error) throw new Error(error.message);
