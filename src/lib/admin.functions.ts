@@ -263,3 +263,99 @@ export const adminDeleteSlot = createServerFn({ method: "POST" })
     if (error) throw new Error(error.message);
     return { ok: true };
   });
+
+// ---- Gestion des APK ----
+
+// Crée une URL signée pour que l'admin upload directement le .apk dans le bucket privé.
+export const adminCreateApkUploadUrl = createServerFn({ method: "POST" })
+  .inputValidator((input) =>
+    PasswordOnly.extend({
+      application_id: z.string().uuid(),
+      file_name: z.string().min(1).max(255),
+      file_size: z.number().int().min(1).max(220 * 1024 * 1024),
+    }).parse(input),
+  )
+  .handler(async ({ data }) => {
+    checkPassword(data.password);
+    const ext = (data.file_name.split(".").pop() || "apk")
+      .toLowerCase()
+      .replace(/[^a-z0-9]/g, "")
+      .slice(0, 5) || "apk";
+    const path = `${data.application_id}/${crypto.randomUUID()}.${ext}`;
+    const { data: signed, error } = await supabaseAdmin.storage
+      .from("apk-files")
+      .createSignedUploadUrl(path);
+    if (error || !signed) {
+      throw new Error(error?.message || "Impossible de créer l'URL d'upload.");
+    }
+    return {
+      path,
+      token: signed.token,
+      signed_url: signed.signedUrl,
+    };
+  });
+
+// Finalise un upload APK : met à jour le path/version/taille sur l'application,
+// et supprime l'ancien fichier APK si présent.
+export const adminFinalizeApkUpload = createServerFn({ method: "POST" })
+  .inputValidator((input) =>
+    PasswordOnly.extend({
+      application_id: z.string().uuid(),
+      apk_file_path: z.string().min(1).max(500),
+      apk_size_bytes: z.number().int().min(1).max(220 * 1024 * 1024),
+      apk_version: z.string().max(50).optional().nullable(),
+    }).parse(input),
+  )
+  .handler(async ({ data }) => {
+    checkPassword(data.password);
+
+    const { data: head } = await supabaseAdmin.storage
+      .from("apk-files")
+      .list(data.apk_file_path.split("/").slice(0, -1).join("/"), {
+        search: data.apk_file_path.split("/").pop(),
+      });
+    if (!head || head.length === 0) {
+      throw new Error("Le fichier n'a pas été trouvé dans le stockage.");
+    }
+
+    const { data: prev } = await supabaseAdmin
+      .from("applications")
+      .select("apk_file_path, product_type")
+      .eq("id", data.application_id)
+      .maybeSingle();
+
+    const { error } = await supabaseAdmin
+      .from("applications")
+      .update({
+        product_type: "apk",
+        apk_file_path: data.apk_file_path,
+        apk_size_bytes: data.apk_size_bytes,
+        apk_version: data.apk_version?.trim() || null,
+      })
+      .eq("id", data.application_id);
+    if (error) throw new Error(error.message);
+
+    if (prev?.apk_file_path && prev.apk_file_path !== data.apk_file_path) {
+      await supabaseAdmin.storage.from("apk-files").remove([prev.apk_file_path]);
+    }
+    return { ok: true };
+  });
+
+// Met à jour uniquement la version APK
+export const adminUpdateApkVersion = createServerFn({ method: "POST" })
+  .inputValidator((input) =>
+    PasswordOnly.extend({
+      application_id: z.string().uuid(),
+      apk_version: z.string().max(50).nullable(),
+    }).parse(input),
+  )
+  .handler(async ({ data }) => {
+    checkPassword(data.password);
+    const { error } = await supabaseAdmin
+      .from("applications")
+      .update({ apk_version: data.apk_version?.trim() || null })
+      .eq("id", data.application_id);
+    if (error) throw new Error(error.message);
+    return { ok: true };
+  });
+
