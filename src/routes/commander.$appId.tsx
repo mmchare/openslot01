@@ -106,7 +106,9 @@ function OrderPage() {
               Finalise ta commande
             </h1>
             <p className="mt-1 text-sm text-muted-foreground">
-              On t'envoie tes accès sur WhatsApp dès paiement confirmé.
+              {fresh.product_type === "apk"
+                ? "Le lien de téléchargement APK apparaîtra dès paiement confirmé."
+                : "On t'envoie tes accès sur WhatsApp dès paiement confirmé."}
             </p>
 
             <div className="mt-6 space-y-4">
@@ -195,7 +197,14 @@ function OrderPage() {
             <div className="mt-6 border-t border-border pt-4">
               <Row label="Prix" value={`${fresh.price_fcfa.toLocaleString("fr-FR")} FCFA`} />
               <Row label="Livraison" value="Instantanée" />
-              <Row label="Stock dispo" value={`${fresh.stock_disponible} slot(s)`} />
+              {fresh.product_type === "apk" ? (
+                <Row
+                  label="Format"
+                  value={`APK${fresh.apk_version ? ` v${fresh.apk_version}` : ""}${fresh.apk_size_bytes ? ` · ${formatMB(fresh.apk_size_bytes)}` : ""}`}
+                />
+              ) : (
+                <Row label="Stock dispo" value={`${fresh.stock_disponible} slot(s)`} />
+              )}
               <div className="mt-3 flex items-center justify-between border-t border-border pt-3">
                 <span className="text-sm text-muted-foreground">Total</span>
                 <span className="font-display text-2xl font-semibold text-primary">
@@ -249,6 +258,10 @@ function Field({
       `}</style>
     </div>
   );
+}
+
+function formatMB(bytes: number): string {
+  return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
 }
 
 function Row({ label, value }: { label: string; value: string }) {

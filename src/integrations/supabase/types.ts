@@ -16,6 +16,9 @@ export type Database = {
     Tables: {
       applications: {
         Row: {
+          apk_file_path: string | null
+          apk_size_bytes: number | null
+          apk_version: string | null
           category: string
           created_at: string
           description: string | null
@@ -24,10 +27,14 @@ export type Database = {
           is_active: boolean
           name: string
           price_fcfa: number
+          product_type: Database["public"]["Enums"]["product_type"]
           sort_order: number
           subscription_duration_days: number
         }
         Insert: {
+          apk_file_path?: string | null
+          apk_size_bytes?: number | null
+          apk_version?: string | null
           category: string
           created_at?: string
           description?: string | null
@@ -36,10 +43,14 @@ export type Database = {
           is_active?: boolean
           name: string
           price_fcfa: number
+          product_type?: Database["public"]["Enums"]["product_type"]
           sort_order?: number
           subscription_duration_days?: number
         }
         Update: {
+          apk_file_path?: string | null
+          apk_size_bytes?: number | null
+          apk_version?: string | null
           category?: string
           created_at?: string
           description?: string | null
@@ -48,6 +59,7 @@ export type Database = {
           is_active?: boolean
           name?: string
           price_fcfa?: number
+          product_type?: Database["public"]["Enums"]["product_type"]
           sort_order?: number
           subscription_duration_days?: number
         }
@@ -181,32 +193,41 @@ export type Database = {
     Views: {
       applications_catalog: {
         Row: {
+          apk_size_bytes: number | null
+          apk_version: string | null
           category: string | null
           description: string | null
           id: string | null
           image_url: string | null
           name: string | null
           price_fcfa: number | null
+          product_type: Database["public"]["Enums"]["product_type"] | null
           sort_order: number | null
           stock_disponible: number | null
         }
         Insert: {
+          apk_size_bytes?: number | null
+          apk_version?: string | null
           category?: string | null
           description?: string | null
           id?: string | null
           image_url?: string | null
           name?: string | null
           price_fcfa?: number | null
+          product_type?: Database["public"]["Enums"]["product_type"] | null
           sort_order?: number | null
           stock_disponible?: never
         }
         Update: {
+          apk_size_bytes?: number | null
+          apk_version?: string | null
           category?: string | null
           description?: string | null
           id?: string | null
           image_url?: string | null
           name?: string | null
           price_fcfa?: number | null
+          product_type?: Database["public"]["Enums"]["product_type"] | null
           sort_order?: number | null
           stock_disponible?: never
         }
@@ -230,6 +251,7 @@ export type Database = {
     }
     Enums: {
       order_status: "en_attente" | "paye" | "echoue"
+      product_type: "account" | "apk"
       slot_status: "disponible" | "vendu" | "bloque"
     }
     CompositeTypes: {
@@ -359,6 +381,7 @@ export const Constants = {
   public: {
     Enums: {
       order_status: ["en_attente", "paye", "echoue"],
+      product_type: ["account", "apk"],
       slot_status: ["disponible", "vendu", "bloque"],
     },
   },

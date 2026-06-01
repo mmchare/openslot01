@@ -1,16 +1,21 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
-import { useQuery } from "@tanstack/react-query";
+import { useMutation, useQuery } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
 import { useEffect, useState } from "react";
 import {
   CheckCircle2,
   Copy,
+  Download,
   Loader2,
   MessageCircle,
   XCircle,
 } from "lucide-react";
 import { z } from "zod";
-import { getOrderForSuccess, simulateDevPayment } from "@/lib/orders.functions";
+import {
+  getApkDownloadUrl,
+  getOrderForSuccess,
+  simulateDevPayment,
+} from "@/lib/orders.functions";
 import { SiteHeader } from "@/components/SiteHeader";
 import { SiteFooter } from "@/components/SiteFooter";
 
@@ -80,7 +85,9 @@ function SuccessPage() {
     );
   }
 
-  if (data.status !== "paye" || !data.access) {
+  const isApk = data.product_type === "apk";
+
+  if (data.status !== "paye" || (!isApk && !data.access)) {
     return (
       <div className="min-h-screen">
         <SiteHeader />
@@ -102,11 +109,15 @@ function SuccessPage() {
     );
   }
 
-  // Succès — affiche les accès
+  // Succès — affiche les accès (compte) ou le téléchargement (APK)
   const a = data.access;
-  const waText = encodeURIComponent(
-    `Bonjour ${data.client_name}, voici vos accès OpenSlot pour ${data.application_name} : Email: ${a.email} | Pass: ${a.password} | Profil: Écran ${a.slot_number}${a.profile_name ? ` (${a.profile_name})` : ""}${a.profile_password ? ` | Code profil: ${a.profile_password}` : ""}. Merci pour votre confiance !`,
-  );
+  const waText = a
+    ? encodeURIComponent(
+        `Bonjour ${data.client_name}, voici vos accès OpenSlot pour ${data.application_name} : Email: ${a.email} | Pass: ${a.password} | Profil: Écran ${a.slot_number}${a.profile_name ? ` (${a.profile_name})` : ""}${a.profile_password ? ` | Code profil: ${a.profile_password}` : ""}. Merci pour votre confiance !`,
+      )
+    : encodeURIComponent(
+        `Bonjour ${data.client_name}, ma commande OpenSlot pour ${data.application_name} est confirmée. J'ai besoin d'aide.`,
+      );
   const waPhone = data.client_whatsapp.replace(/[^0-9]/g, "");
   const waLink = `https://wa.me/${waPhone}?text=${waText}`;
 
@@ -126,37 +137,46 @@ function SuccessPage() {
           </p>
         </div>
 
-        <div className="mt-8 rounded-2xl border border-primary/30 bg-gradient-card p-6 shadow-card sm:p-8">
-          <h2 className="font-display text-lg">Tes accès</h2>
-          <p className="text-sm text-muted-foreground">
-            Garde ces informations en lieu sûr.
-          </p>
+        {isApk ? (
+          <ApkDownloadBlock
+            orderId={orderId}
+            appName={data.application_name}
+            version={data.apk_version}
+            sizeBytes={data.apk_size_bytes}
+          />
+        ) : a ? (
+          <div className="mt-8 rounded-2xl border border-primary/30 bg-gradient-card p-6 shadow-card sm:p-8">
+            <h2 className="font-display text-lg">Tes accès</h2>
+            <p className="text-sm text-muted-foreground">
+              Garde ces informations en lieu sûr.
+            </p>
 
-          <div className="mt-4 space-y-3">
-            <AccessRow label="Email du compte" value={a.email} />
-            <AccessRow label="Mot de passe" value={a.password} />
-            <AccessRow
-              label="Profil / Écran à utiliser"
-              value={
-                a.profile_name
-                  ? `Écran ${a.slot_number} — ${a.profile_name}`
-                  : `Écran ${a.slot_number}`
-              }
-            />
-            {a.profile_password && (
-              <AccessRow label="Code / PIN du profil" value={a.profile_password} />
-            )}
+            <div className="mt-4 space-y-3">
+              <AccessRow label="Email du compte" value={a.email} />
+              <AccessRow label="Mot de passe" value={a.password} />
+              <AccessRow
+                label="Profil / Écran à utiliser"
+                value={
+                  a.profile_name
+                    ? `Écran ${a.slot_number} — ${a.profile_name}`
+                    : `Écran ${a.slot_number}`
+                }
+              />
+              {a.profile_password && (
+                <AccessRow label="Code / PIN du profil" value={a.profile_password} />
+              )}
+            </div>
+
+            <a
+              href={waLink}
+              target="_blank"
+              rel="noreferrer"
+              className="mt-6 inline-flex w-full items-center justify-center gap-2 rounded-full bg-gradient-primary px-5 py-3 text-sm font-semibold text-primary-foreground shadow-glow transition hover:opacity-90"
+            >
+              <MessageCircle className="h-4 w-4" /> Recevoir mes accès sur WhatsApp
+            </a>
           </div>
-
-          <a
-            href={waLink}
-            target="_blank"
-            rel="noreferrer"
-            className="mt-6 inline-flex w-full items-center justify-center gap-2 rounded-full bg-gradient-primary px-5 py-3 text-sm font-semibold text-primary-foreground shadow-glow transition hover:opacity-90"
-          >
-            <MessageCircle className="h-4 w-4" /> Recevoir mes accès sur WhatsApp
-          </a>
-        </div>
+        ) : null}
 
         <div className="mt-8 text-center text-sm text-muted-foreground">
           Un problème ? Écris-nous sur WhatsApp, on te répond rapidement.

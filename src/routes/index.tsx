@@ -140,14 +140,20 @@ function Feature({ icon, label }: { icon: React.ReactNode; label: string }) {
 }
 
 function ProductCard({ item }: { item: CatalogItem }) {
-  const inStock = item.stock_disponible > 0;
+  const isApk = item.product_type === "apk";
+  const inStock = isApk ? item.stock_disponible > 0 : item.stock_disponible > 0;
   return (
     <div className="group flex flex-col rounded-2xl border border-border bg-gradient-card p-5 shadow-card transition hover:border-primary/40">
       <div className="flex items-start gap-4">
         <AppIcon slug={item.image_url} size="lg" />
         <div className="flex-1">
-          <div className="flex items-center gap-2">
+          <div className="flex flex-wrap items-center gap-2">
             <h3 className="font-display text-lg leading-none">{item.name}</h3>
+            {isApk && (
+              <span className="rounded-full bg-primary/15 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wider text-primary">
+                APK
+              </span>
+            )}
           </div>
           <span className="mt-1 inline-block rounded-full bg-surface px-2 py-0.5 text-[10px] uppercase tracking-wider text-muted-foreground">
             {item.category}
@@ -166,7 +172,13 @@ function ProductCard({ item }: { item: CatalogItem }) {
             <span className="text-xs font-normal text-muted-foreground">FCFA</span>
           </div>
           <div className={`mt-1 text-xs ${inStock ? "text-primary" : "text-destructive"}`}>
-            {inStock ? `${item.stock_disponible} en stock` : "Rupture de stock"}
+            {isApk
+              ? inStock
+                ? `Téléchargement immédiat${item.apk_version ? ` · v${item.apk_version}` : ""}`
+                : "Indisponible"
+              : inStock
+                ? `${item.stock_disponible} en stock`
+                : "Rupture de stock"}
           </div>
         </div>
         {inStock ? (
@@ -175,7 +187,7 @@ function ProductCard({ item }: { item: CatalogItem }) {
             params={{ appId: item.id }}
             className="rounded-full bg-gradient-primary px-4 py-2 text-sm font-semibold text-primary-foreground shadow-glow transition hover:opacity-90"
           >
-            Commander
+            {isApk ? "Acheter l'APK" : "Commander"}
           </Link>
         ) : (
           <button
