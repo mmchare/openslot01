@@ -19,10 +19,9 @@ const CreateOrderInput = z.object({
 export const createOrder = createServerFn({ method: "POST" })
   .inputValidator((input) => CreateOrderInput.parse(input))
   .handler(async ({ data }) => {
-    // Récupère le produit
     const { data: app, error: appErr } = await supabaseAdmin
       .from("applications")
-      .select("id, name, price_fcfa, is_active")
+      .select("id, name, price_fcfa, is_active, product_type, apk_file_path")
       .eq("id", data.application_id)
       .maybeSingle();
 
@@ -30,18 +29,22 @@ export const createOrder = createServerFn({ method: "POST" })
       throw new Error("Produit indisponible.");
     }
 
-    // Vérifie le stock
-    const { count } = await supabaseAdmin
-      .from("slots_stock")
-      .select("id", { count: "exact", head: true })
-      .eq("application_id", app.id)
-      .eq("status", "disponible");
+    if (app.product_type === "apk") {
+      if (!app.apk_file_path) {
+        throw new Error("Cet APK n'est pas encore disponible au téléchargement.");
+      }
+    } else {
+      const { count } = await supabaseAdmin
+        .from("slots_stock")
+        .select("id", { count: "exact", head: true })
+        .eq("application_id", app.id)
+        .eq("status", "disponible");
 
-    if (!count || count <= 0) {
-      throw new Error("Désolé, ce produit est en rupture de stock.");
+      if (!count || count <= 0) {
+        throw new Error("Désolé, ce produit est en rupture de stock.");
+      }
     }
 
-    // Crée la commande en attente
     const { data: order, error: orderErr } = await supabaseAdmin
       .from("orders")
       .insert({
@@ -59,12 +62,10 @@ export const createOrder = createServerFn({ method: "POST" })
       throw new Error("Impossible de créer la commande.");
     }
 
-    // Construit l'URL de callback (page de succès)
     const host = getRequestHost();
     const protocol = host.startsWith("localhost") ? "http" : "https";
     const callbackUrl = `${protocol}://${host}/commande/succes/${order.id}`;
 
-    // Initialise Notch Pay (ou DEV mode)
     const pay = await initializeNotchPayment({
       orderId: order.id,
       amountFcfa: app.price_fcfa,
@@ -76,7 +77,6 @@ export const createOrder = createServerFn({ method: "POST" })
       callbackUrl,
     });
 
-    // Stocke la référence Notch Pay
     await supabaseAdmin
       .from("orders")
       .update({ notchpay_reference: pay.reference })
@@ -95,12 +95,21 @@ export const getOrderForSuccess = createServerFn({ method: "GET" })
     const { data: order } = await supabaseAdmin
       .from("orders")
       .select(
-        "id, status, client_name, client_whatsapp, amount_paid, slot_id, subscription_start_at, subscription_end_at, applications(name)",
+        "id, status, client_name, client_whatsapp, amount_paid, slot_id, subscription_start_at, subscription_end_at, applications(name, product_type, apk_version, apk_size_bytes)",
       )
       .eq("id", data.order_id)
       .maybeSingle();
 
     if (!order) return null;
+
+    const appRel = order.applications as
+      | {
+          name: string;
+          product_type: "account" | "apk";
+          apk_version: string | null;
+          apk_size_bytes: number | null;
+        }
+      | null;
 
     let access: OrderSuccessPayload["access"] = null;
     if (order.slot_id) {
@@ -125,19 +134,17 @@ export const getOrderForSuccess = createServerFn({ method: "GET" })
       status: order.status,
       client_name: order.client_name,
       client_whatsapp: order.client_whatsapp,
-      application_name:
-        (order.applications as { name: string } | null)?.name ?? "Produit",
+      application_name: appRel?.name ?? "Produit",
       amount_paid: order.amount_paid,
       subscription_start_at: order.subscription_start_at,
       subscription_end_at: order.subscription_end_at,
+      product_type: appRel?.product_type ?? "account",
+      apk_version: appRel?.apk_version ?? null,
+      apk_size_bytes: appRel?.apk_size_bytes ?? null,
       access,
     };
   });
 
-
-// DEV: simule un paiement réussi (utilisé uniquement quand Notch Pay
-// n'est pas encore configuré). Sécurité: vérifie que la commande est en
-// mode DEV (référence préfixée DEV_).
 export const simulateDevPayment = createServerFn({ method: "POST" })
   .inputValidator((input) => z.object({ order_id: z.string().uuid() }).parse(input))
   .handler(async ({ data }) => {
@@ -158,7 +165,6 @@ export const simulateDevPayment = createServerFn({ method: "POST" })
     });
     if (error) throw new Error(error.message);
 
-    // Alerte stock (côté webhook réel aussi)
     try {
       const { count } = await supabaseAdmin
         .from("slots_stock")
@@ -181,4 +187,47 @@ export const simulateDevPayment = createServerFn({ method: "POST" })
     }
 
     return { ok: true };
+  });
+
+// Génère un lien de téléchargement signé (24h) pour l'APK d'une commande payée.
+export const getApkDownloadUrl = createServerFn({ method: "POST" })
+  .inputValidator((input) => z.object({ order_id: z.string().uuid() }).parse(input))
+  .handler(async ({ data }) => {
+    const { data: order } = await supabaseAdmin
+      .from("orders")
+      .select("id, status, application_id")
+      .eq("id", data.order_id)
+      .maybeSingle();
+
+    if (!order) throw new Error("Commande introuvable.");
+    if (order.status !== "paye") {
+      throw new Error("Le paiement n'est pas encore confirmé.");
+    }
+
+    const { data: app } = await supabaseAdmin
+      .from("applications")
+      .select("product_type, apk_file_path, name")
+      .eq("id", order.application_id)
+      .maybeSingle();
+
+    if (!app || app.product_type !== "apk" || !app.apk_file_path) {
+      throw new Error("Aucun APK associé à cette commande.");
+    }
+
+    const downloadName = `${app.name.replace(/[^a-zA-Z0-9._-]+/g, "_")}.apk`;
+    const { data: signed, error } = await supabaseAdmin.storage
+      .from("apk-files")
+      .createSignedUrl(app.apk_file_path, 60 * 60 * 24, {
+        download: downloadName,
+      });
+
+    if (error || !signed) {
+      throw new Error(error?.message || "Impossible de générer le lien de téléchargement.");
+    }
+
+    return {
+      url: signed.signedUrl,
+      expires_in_seconds: 60 * 60 * 24,
+      file_name: downloadName,
+    };
   });
