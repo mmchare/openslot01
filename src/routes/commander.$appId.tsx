@@ -106,7 +106,9 @@ function OrderPage() {
               Finalise ta commande
             </h1>
             <p className="mt-1 text-sm text-muted-foreground">
-              On t'envoie tes accès sur WhatsApp dès paiement confirmé.
+              {fresh.product_type === "apk"
+                ? "Le lien de téléchargement APK apparaîtra dès paiement confirmé."
+                : "On t'envoie tes accès sur WhatsApp dès paiement confirmé."}
             </p>
 
             <div className="mt-6 space-y-4">
