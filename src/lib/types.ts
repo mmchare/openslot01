@@ -1,3 +1,5 @@
+export type ProductType = "account" | "apk";
+
 export interface CatalogItem {
   id: string;
   name: string;
@@ -6,6 +8,9 @@ export interface CatalogItem {
   price_fcfa: number;
   image_url: string | null;
   stock_disponible: number;
+  product_type: ProductType;
+  apk_version: string | null;
+  apk_size_bytes: number | null;
 }
 
 export interface OrderSuccessPayload {
@@ -17,6 +22,9 @@ export interface OrderSuccessPayload {
   amount_paid: number;
   subscription_start_at: string | null;
   subscription_end_at: string | null;
+  product_type: ProductType;
+  apk_version: string | null;
+  apk_size_bytes: number | null;
   access: null | {
     email: string;
     password: string;
@@ -25,4 +33,3 @@ export interface OrderSuccessPayload {
     profile_password: string | null;
   };
 }
-
