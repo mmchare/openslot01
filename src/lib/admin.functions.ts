@@ -66,6 +66,7 @@ export const adminCreateApp = createServerFn({ method: "POST" })
       price_fcfa: z.number().int().min(0).max(10_000_000),
       image_url: z.string().url().max(500).optional().nullable(),
       subscription_duration_days: z.number().int().min(1).max(3650),
+      product_type: z.enum(["account", "apk"]).optional(),
     }).parse(input),
   )
   .handler(async ({ data }) => {
@@ -77,6 +78,7 @@ export const adminCreateApp = createServerFn({ method: "POST" })
       price_fcfa: data.price_fcfa,
       image_url: data.image_url || null,
       subscription_duration_days: data.subscription_duration_days,
+      product_type: data.product_type ?? "account",
       is_active: true,
     });
     if (error) throw new Error(error.message);
