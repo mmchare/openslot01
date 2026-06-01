@@ -197,7 +197,14 @@ function OrderPage() {
             <div className="mt-6 border-t border-border pt-4">
               <Row label="Prix" value={`${fresh.price_fcfa.toLocaleString("fr-FR")} FCFA`} />
               <Row label="Livraison" value="Instantanée" />
-              <Row label="Stock dispo" value={`${fresh.stock_disponible} slot(s)`} />
+              {fresh.product_type === "apk" ? (
+                <Row
+                  label="Format"
+                  value={`APK${fresh.apk_version ? ` v${fresh.apk_version}` : ""}${fresh.apk_size_bytes ? ` · ${formatMB(fresh.apk_size_bytes)}` : ""}`}
+                />
+              ) : (
+                <Row label="Stock dispo" value={`${fresh.stock_disponible} slot(s)`} />
+              )}
               <div className="mt-3 flex items-center justify-between border-t border-border pt-3">
                 <span className="text-sm text-muted-foreground">Total</span>
                 <span className="font-display text-2xl font-semibold text-primary">
