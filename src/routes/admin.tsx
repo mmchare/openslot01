@@ -755,6 +755,22 @@ function CreateAppForm({
         onChange={(e) => setForm({ ...form, category: e.target.value })}
         className="rounded-lg border border-border bg-background px-3 py-2 text-sm sm:col-span-3"
       />
+      <label className="sm:col-span-6 flex flex-col gap-1 rounded-lg border border-border bg-background px-3 py-2 text-sm">
+        <span className="text-xs font-medium text-muted-foreground">Type de produit</span>
+        <select
+          value={form.product_type}
+          onChange={(e) =>
+            setForm({ ...form, product_type: e.target.value as "account" | "apk" })
+          }
+          className="bg-transparent text-sm outline-none"
+        >
+          <option value="account">Compte / Slot (accès partagé)</option>
+          <option value="apk">APK Premium (téléchargement)</option>
+        </select>
+        <span className="text-[11px] text-muted-foreground">
+          Pour un APK, tu pourras uploader le fichier .apk après création via « Gérer l'APK ».
+        </span>
+      </label>
       <div className="sm:col-span-6 space-y-2 rounded-lg border border-border bg-background px-3 py-2">
         <span className="text-xs font-medium text-muted-foreground">Icône de l'app</span>
         <IconUpload
