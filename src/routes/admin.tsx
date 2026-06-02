@@ -263,6 +263,11 @@ function AdminDashboard({
                   <span className="rounded-full bg-muted px-2 py-0.5 text-[10px] uppercase tracking-wider text-muted-foreground">
                     {a.category}
                   </span>
+                  {a.product_type === "apk" && (
+                    <span className="rounded-full bg-primary/15 px-2 py-0.5 text-[10px] uppercase tracking-wider text-primary">
+                      APK
+                    </span>
+                  )}
                   {!a.is_active && (
                     <span className="rounded-full bg-destructive/15 px-2 py-0.5 text-[10px] uppercase tracking-wider text-destructive">
                       Inactif
