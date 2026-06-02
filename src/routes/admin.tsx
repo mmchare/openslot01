@@ -6,10 +6,13 @@ import { Check, ImageIcon, Loader2, Lock, Pencil, Plus, Power, Timer, Trash2, Up
 import {
   adminAddSlot,
   adminCreateApp,
+  adminCreateApkUploadUrl,
   adminDeleteSlot,
+  adminFinalizeApkUpload,
   adminListApps,
   adminListSlots,
   adminToggleApp,
+  adminUpdateApkVersion,
   adminUpdateAppDuration,
   adminUpdateAppImage,
   adminUpdateAppPrice,
@@ -18,6 +21,7 @@ import {
 } from "@/lib/admin.functions";
 import { SiteHeader } from "@/components/SiteHeader";
 import { SiteFooter } from "@/components/SiteFooter";
+import { supabase } from "@/integrations/supabase/client";
 
 
 const PWD_KEY = "openslot_admin_pwd";
