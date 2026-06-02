@@ -488,14 +488,27 @@ function AdminDashboard({
                   }
                   className="rounded-lg bg-gradient-primary px-3 py-1.5 text-xs font-semibold text-primary-foreground shadow-glow"
                 >
-                  {openAppId === a.id ? "Fermer" : "Gérer le stock"}
+                  {openAppId === a.id
+                    ? "Fermer"
+                    : a.product_type === "apk"
+                      ? "Gérer l'APK"
+                      : "Gérer le stock"}
                 </button>
               </div>
             </div>
 
-            {openAppId === a.id && (
-              <StockManager appId={a.id} password={password} />
-            )}
+            {openAppId === a.id &&
+              (a.product_type === "apk" ? (
+                <ApkManager
+                  appId={a.id}
+                  password={password}
+                  currentVersion={a.apk_version}
+                  currentPath={a.apk_file_path}
+                  currentSize={a.apk_size_bytes}
+                />
+              ) : (
+                <StockManager appId={a.id} password={password} />
+              ))}
           </div>
         ))}
       </div>
