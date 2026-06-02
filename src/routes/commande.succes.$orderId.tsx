@@ -222,3 +222,75 @@ function AccessRow({ label, value }: { label: string; value: string }) {
     </div>
   );
 }
+
+function formatBytes(b: number | null) {
+  if (!b) return "";
+  const mb = b / (1024 * 1024);
+  return `${mb.toFixed(1)} Mo`;
+}
+
+function ApkDownloadBlock({
+  orderId,
+  appName,
+  version,
+  sizeBytes,
+}: {
+  orderId: string;
+  appName: string;
+  version: string | null;
+  sizeBytes: number | null;
+}) {
+  const getUrl = useServerFn(getApkDownloadUrl);
+  const mut = useMutation({
+    mutationFn: () => getUrl({ data: { order_id: orderId } }),
+    onSuccess: (res) => {
+      // Déclenche le téléchargement
+      const a = document.createElement("a");
+      a.href = res.url;
+      a.rel = "noopener";
+      a.download = res.file_name;
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+    },
+  });
+
+  return (
+    <div className="mt-8 rounded-2xl border border-primary/30 bg-gradient-card p-6 shadow-card sm:p-8">
+      <h2 className="font-display text-lg">Télécharger ton APK</h2>
+      <p className="text-sm text-muted-foreground">
+        {appName}
+        {version ? ` — v${version}` : ""}
+        {sizeBytes ? ` · ${formatBytes(sizeBytes)}` : ""}
+      </p>
+      <p className="mt-2 text-xs text-muted-foreground">
+        Le lien de téléchargement est valable 24 heures. Tu peux le régénérer
+        en revenant sur cette page.
+      </p>
+
+      <button
+        onClick={() => mut.mutate()}
+        disabled={mut.isPending}
+        className="mt-5 inline-flex w-full items-center justify-center gap-2 rounded-full bg-gradient-primary px-5 py-3 text-sm font-semibold text-primary-foreground shadow-glow transition hover:opacity-90 disabled:opacity-60"
+      >
+        {mut.isPending ? (
+          <Loader2 className="h-4 w-4 animate-spin" />
+        ) : (
+          <Download className="h-4 w-4" />
+        )}
+        {mut.isPending ? "Génération du lien…" : "Télécharger l'APK"}
+      </button>
+
+      {mut.error && (
+        <p className="mt-3 text-xs text-destructive">
+          {(mut.error as Error).message}
+        </p>
+      )}
+
+      <p className="mt-4 text-xs text-muted-foreground">
+        Sur Android : ouvre le fichier .apk téléchargé puis autorise
+        « l'installation depuis cette source » si ton téléphone le demande.
+      </p>
+    </div>
+  );
+}
