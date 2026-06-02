@@ -392,10 +392,19 @@ function AdminDashboard({
                     </button>
                   )}
                   <span>·</span>
-                  <span className="text-primary">
-                    {a.stock_disponible} dispo
-                  </span>
-                  <span>· {a.stock_vendu} vendus</span>
+                  {a.product_type === "apk" ? (
+                    <span className="text-primary">
+                      {a.apk_file_path ? "APK prêt" : "APK manquant"}
+                      {a.apk_version ? ` · v${a.apk_version}` : ""}
+                    </span>
+                  ) : (
+                    <>
+                      <span className="text-primary">
+                        {a.stock_disponible} dispo
+                      </span>
+                      <span>· {a.stock_vendu} vendus</span>
+                    </>
+                  )}
                   <span>·</span>
                   {editingDurationId === a.id ? (
                     <form
