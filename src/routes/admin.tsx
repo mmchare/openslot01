@@ -21,7 +21,7 @@ import {
 } from "@/lib/admin.functions";
 import { SiteHeader } from "@/components/SiteHeader";
 import { SiteFooter } from "@/components/SiteFooter";
-import { supabase } from "@/integrations/supabase/client";
+
 
 
 const PWD_KEY = "openslot_admin_pwd";
