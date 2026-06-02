@@ -714,6 +714,7 @@ function CreateAppForm({
     price_fcfa: 2000,
     image_url: "",
     subscription_duration_days: 30,
+    product_type: "account" as "account" | "apk",
   });
   const mut = useMutation({
     mutationFn: () =>
@@ -726,6 +727,7 @@ function CreateAppForm({
           price_fcfa: Math.round(Number(form.price_fcfa) || 0),
           image_url: form.image_url.trim() || null,
           subscription_duration_days: Math.round(Number(form.subscription_duration_days) || 30),
+          product_type: form.product_type,
         },
       }),
     onSuccess: onCreated,
