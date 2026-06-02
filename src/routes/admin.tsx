@@ -6,10 +6,13 @@ import { Check, ImageIcon, Loader2, Lock, Pencil, Plus, Power, Timer, Trash2, Up
 import {
   adminAddSlot,
   adminCreateApp,
+  adminCreateApkUploadUrl,
   adminDeleteSlot,
+  adminFinalizeApkUpload,
   adminListApps,
   adminListSlots,
   adminToggleApp,
+  adminUpdateApkVersion,
   adminUpdateAppDuration,
   adminUpdateAppImage,
   adminUpdateAppPrice,
@@ -18,6 +21,7 @@ import {
 } from "@/lib/admin.functions";
 import { SiteHeader } from "@/components/SiteHeader";
 import { SiteFooter } from "@/components/SiteFooter";
+
 
 
 const PWD_KEY = "openslot_admin_pwd";
@@ -259,6 +263,11 @@ function AdminDashboard({
                   <span className="rounded-full bg-muted px-2 py-0.5 text-[10px] uppercase tracking-wider text-muted-foreground">
                     {a.category}
                   </span>
+                  {a.product_type === "apk" && (
+                    <span className="rounded-full bg-primary/15 px-2 py-0.5 text-[10px] uppercase tracking-wider text-primary">
+                      APK
+                    </span>
+                  )}
                   {!a.is_active && (
                     <span className="rounded-full bg-destructive/15 px-2 py-0.5 text-[10px] uppercase tracking-wider text-destructive">
                       Inactif
@@ -383,10 +392,19 @@ function AdminDashboard({
                     </button>
                   )}
                   <span>·</span>
-                  <span className="text-primary">
-                    {a.stock_disponible} dispo
-                  </span>
-                  <span>· {a.stock_vendu} vendus</span>
+                  {a.product_type === "apk" ? (
+                    <span className="text-primary">
+                      {a.apk_file_path ? "APK prêt" : "APK manquant"}
+                      {a.apk_version ? ` · v${a.apk_version}` : ""}
+                    </span>
+                  ) : (
+                    <>
+                      <span className="text-primary">
+                        {a.stock_disponible} dispo
+                      </span>
+                      <span>· {a.stock_vendu} vendus</span>
+                    </>
+                  )}
                   <span>·</span>
                   {editingDurationId === a.id ? (
                     <form
@@ -470,14 +488,27 @@ function AdminDashboard({
                   }
                   className="rounded-lg bg-gradient-primary px-3 py-1.5 text-xs font-semibold text-primary-foreground shadow-glow"
                 >
-                  {openAppId === a.id ? "Fermer" : "Gérer le stock"}
+                  {openAppId === a.id
+                    ? "Fermer"
+                    : a.product_type === "apk"
+                      ? "Gérer l'APK"
+                      : "Gérer le stock"}
                 </button>
               </div>
             </div>
 
-            {openAppId === a.id && (
-              <StockManager appId={a.id} password={password} />
-            )}
+            {openAppId === a.id &&
+              (a.product_type === "apk" ? (
+                <ApkManager
+                  appId={a.id}
+                  password={password}
+                  currentVersion={a.apk_version}
+                  currentPath={a.apk_file_path}
+                  currentSize={a.apk_size_bytes}
+                />
+              ) : (
+                <StockManager appId={a.id} password={password} />
+              ))}
           </div>
         ))}
       </div>
@@ -683,6 +714,7 @@ function CreateAppForm({
     price_fcfa: 2000,
     image_url: "",
     subscription_duration_days: 30,
+    product_type: "account" as "account" | "apk",
   });
   const mut = useMutation({
     mutationFn: () =>
@@ -695,6 +727,7 @@ function CreateAppForm({
           price_fcfa: Math.round(Number(form.price_fcfa) || 0),
           image_url: form.image_url.trim() || null,
           subscription_duration_days: Math.round(Number(form.subscription_duration_days) || 30),
+          product_type: form.product_type,
         },
       }),
     onSuccess: onCreated,
@@ -722,6 +755,22 @@ function CreateAppForm({
         onChange={(e) => setForm({ ...form, category: e.target.value })}
         className="rounded-lg border border-border bg-background px-3 py-2 text-sm sm:col-span-3"
       />
+      <label className="sm:col-span-6 flex flex-col gap-1 rounded-lg border border-border bg-background px-3 py-2 text-sm">
+        <span className="text-xs font-medium text-muted-foreground">Type de produit</span>
+        <select
+          value={form.product_type}
+          onChange={(e) =>
+            setForm({ ...form, product_type: e.target.value as "account" | "apk" })
+          }
+          className="bg-transparent text-sm outline-none"
+        >
+          <option value="account">Compte / Slot (accès partagé)</option>
+          <option value="apk">APK Premium (téléchargement)</option>
+        </select>
+        <span className="text-[11px] text-muted-foreground">
+          Pour un APK, tu pourras uploader le fichier .apk après création via « Gérer l'APK ».
+        </span>
+      </label>
       <div className="sm:col-span-6 space-y-2 rounded-lg border border-border bg-background px-3 py-2">
         <span className="text-xs font-medium text-muted-foreground">Icône de l'app</span>
         <IconUpload
@@ -870,4 +919,185 @@ function IconUpload({
     </div>
   );
 }
+
+function formatMo(b: number | null) {
+  if (!b) return "—";
+  return `${(b / (1024 * 1024)).toFixed(1)} Mo`;
+}
+
+function ApkManager({
+  appId,
+  password,
+  currentVersion,
+  currentPath,
+  currentSize,
+}: {
+  appId: string;
+  password: string;
+  currentVersion: string | null;
+  currentPath: string | null;
+  currentSize: number | null;
+}) {
+  const qc = useQueryClient();
+  const createUrl = useServerFn(adminCreateApkUploadUrl);
+  const finalize = useServerFn(adminFinalizeApkUpload);
+  const updateVersion = useServerFn(adminUpdateApkVersion);
+
+  const [version, setVersion] = useState(currentVersion ?? "");
+  const [progress, setProgress] = useState<number | null>(null);
+  const [error, setError] = useState<string | null>(null);
+  const [pending, setPending] = useState(false);
+
+  const refresh = () => qc.invalidateQueries({ queryKey: ["admin-apps"] });
+
+  const versionMut = useMutation({
+    mutationFn: () =>
+      updateVersion({
+        data: { password, application_id: appId, apk_version: version.trim() || null },
+      }),
+    onSuccess: refresh,
+  });
+
+  const handleFile = async (file: File) => {
+    setError(null);
+    setProgress(0);
+    if (!file.name.toLowerCase().endsWith(".apk")) {
+      setError("Le fichier doit avoir l'extension .apk");
+      setProgress(null);
+      return;
+    }
+    if (file.size > 200 * 1024 * 1024) {
+      setError("Fichier trop volumineux (max 200 Mo).");
+      setProgress(null);
+      return;
+    }
+    setPending(true);
+    try {
+      const signed = await createUrl({
+        data: {
+          password,
+          application_id: appId,
+          file_name: file.name,
+          file_size: file.size,
+        },
+      });
+
+      // Upload direct vers Supabase Storage avec progression
+      await new Promise<void>((resolve, reject) => {
+        const xhr = new XMLHttpRequest();
+        xhr.open("PUT", signed.signed_url, true);
+        xhr.setRequestHeader("Content-Type", "application/vnd.android.package-archive");
+        xhr.upload.onprogress = (e) => {
+          if (e.lengthComputable) {
+            setProgress(Math.round((e.loaded / e.total) * 100));
+          }
+        };
+        xhr.onload = () => {
+          if (xhr.status >= 200 && xhr.status < 300) resolve();
+          else reject(new Error(`Upload échoué (HTTP ${xhr.status})`));
+        };
+        xhr.onerror = () => reject(new Error("Erreur réseau pendant l'upload."));
+        xhr.send(file);
+      });
+
+      await finalize({
+        data: {
+          password,
+          application_id: appId,
+          apk_file_path: signed.path,
+          apk_size_bytes: file.size,
+          apk_version: version.trim() || null,
+        },
+      });
+      refresh();
+      setProgress(100);
+    } catch (e) {
+      setError((e as Error).message);
+    } finally {
+      setPending(false);
+    }
+  };
+
+  return (
+    <div className="mt-4 border-t border-border pt-4">
+      <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+        <div className="rounded-lg border border-border bg-background p-3 text-sm">
+          <div className="text-xs uppercase tracking-wider text-muted-foreground">
+            Fichier actuel
+          </div>
+          <div className="mt-1 font-mono text-xs break-all">
+            {currentPath ?? "Aucun APK uploadé"}
+          </div>
+          <div className="mt-1 text-xs text-muted-foreground">
+            Taille : {formatMo(currentSize)}
+            {currentVersion ? ` · Version : v${currentVersion}` : ""}
+          </div>
+        </div>
+
+        <form
+          onSubmit={(e) => {
+            e.preventDefault();
+            versionMut.mutate();
+          }}
+          className="flex items-end gap-2 rounded-lg border border-border bg-background p-3"
+        >
+          <label className="flex-1 text-sm">
+            <span className="block text-xs text-muted-foreground">Version (optionnel)</span>
+            <input
+              value={version}
+              onChange={(e) => setVersion(e.target.value)}
+              placeholder="ex: 2.4.1"
+              className="mt-1 w-full rounded-md border border-border bg-background px-2 py-1.5 text-sm"
+            />
+          </label>
+          <button
+            type="submit"
+            disabled={versionMut.isPending}
+            className="rounded-md bg-primary/15 px-3 py-1.5 text-xs font-semibold text-primary hover:bg-primary/25 disabled:opacity-50"
+          >
+            {versionMut.isPending ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : "Enregistrer"}
+          </button>
+        </form>
+      </div>
+
+      <label className="mt-4 inline-flex cursor-pointer items-center gap-2 rounded-lg border border-primary/40 bg-gradient-primary px-4 py-2 text-sm font-semibold text-primary-foreground shadow-glow disabled:opacity-50">
+        {pending ? <Loader2 className="h-4 w-4 animate-spin" /> : <Upload className="h-4 w-4" />}
+        {pending
+          ? progress !== null
+            ? `Upload… ${progress}%`
+            : "Upload en cours…"
+          : currentPath
+            ? "Remplacer l'APK"
+            : "Uploader l'APK"}
+        <input
+          type="file"
+          accept=".apk,application/vnd.android.package-archive"
+          className="hidden"
+          disabled={pending}
+          onChange={(e) => {
+            const f = e.target.files?.[0];
+            if (f) handleFile(f);
+            e.target.value = "";
+          }}
+        />
+      </label>
+
+      {progress !== null && pending && (
+        <div className="mt-2 h-1.5 w-full overflow-hidden rounded-full bg-muted">
+          <div
+            className="h-full bg-gradient-primary transition-all"
+            style={{ width: `${progress}%` }}
+          />
+        </div>
+      )}
+
+      {error && <p className="mt-2 text-xs text-destructive">{error}</p>}
+      <p className="mt-2 text-[11px] text-muted-foreground">
+        Le fichier est stocké dans un bucket privé. Après paiement, l'utilisateur
+        reçoit un lien de téléchargement signé, valable 24 heures.
+      </p>
+    </div>
+  );
+}
+
 
