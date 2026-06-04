@@ -225,6 +225,35 @@ function AccessRow({ label, value }: { label: string; value: string }) {
   );
 }
 
+function SupportRef({ orderId }: { orderId: string }) {
+  const [copied, setCopied] = useState(false);
+  const shortRef = orderId.slice(0, 8).toUpperCase();
+  return (
+    <div className="mx-auto mt-8 max-w-sm rounded-xl border border-border bg-surface px-4 py-3 text-left">
+      <div className="text-xs uppercase tracking-wider text-muted-foreground">
+        Référence à donner au support
+      </div>
+      <div className="mt-1 flex items-center justify-between gap-3">
+        <span className="font-mono text-sm">{shortRef}</span>
+        <button
+          onClick={async () => {
+            try {
+              await navigator.clipboard.writeText(orderId);
+              setCopied(true);
+              setTimeout(() => setCopied(false), 1500);
+            } catch {
+              /* ignore */
+            }
+          }}
+          className="inline-flex items-center gap-1 rounded-md border border-border bg-background px-2 py-1 text-xs hover:border-primary/40"
+        >
+          <Copy className="h-3 w-3" /> {copied ? "Copié" : "Copier ID complet"}
+        </button>
+      </div>
+    </div>
+  );
+}
+
 function formatBytes(b: number | null) {
   if (!b) return "";
   const mb = b / (1024 * 1024);
