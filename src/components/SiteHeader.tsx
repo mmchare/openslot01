@@ -25,7 +25,7 @@ export function SiteHeader() {
           </a>
         </nav>
         <a
-          href="https://wa.me/237"
+          href="https://wa.me/237683179424"
           target="_blank"
           rel="noreferrer"
           className="rounded-full border border-border bg-surface px-4 py-1.5 text-sm font-medium text-foreground/90 hover:border-primary/40 hover:text-foreground transition"
