@@ -13,6 +13,7 @@ import { Route as AdminRouteImport } from './routes/admin'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as CommanderAppIdRouteImport } from './routes/commander.$appId'
 import { Route as CommandeOrderIdRouteImport } from './routes/commande.$orderId'
+import { Route as AdminDiagnosticRouteImport } from './routes/admin.diagnostic'
 import { Route as CommandeSuccesOrderIdRouteImport } from './routes/commande.succes.$orderId'
 import { Route as ApiPublicWebhooksNotchpayRouteImport } from './routes/api/public/webhooks/notchpay'
 
@@ -36,6 +37,11 @@ const CommandeOrderIdRoute = CommandeOrderIdRouteImport.update({
   path: '/commande/$orderId',
   getParentRoute: () => rootRouteImport,
 } as any)
+const AdminDiagnosticRoute = AdminDiagnosticRouteImport.update({
+  id: '/diagnostic',
+  path: '/diagnostic',
+  getParentRoute: () => AdminRoute,
+} as any)
 const CommandeSuccesOrderIdRoute = CommandeSuccesOrderIdRouteImport.update({
   id: '/commande/succes/$orderId',
   path: '/commande/succes/$orderId',
@@ -50,7 +56,8 @@ const ApiPublicWebhooksNotchpayRoute =
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
-  '/admin': typeof AdminRoute
+  '/admin': typeof AdminRouteWithChildren
+  '/admin/diagnostic': typeof AdminDiagnosticRoute
   '/commande/$orderId': typeof CommandeOrderIdRoute
   '/commander/$appId': typeof CommanderAppIdRoute
   '/commande/succes/$orderId': typeof CommandeSuccesOrderIdRoute
@@ -58,7 +65,8 @@ export interface FileRoutesByFullPath {
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
-  '/admin': typeof AdminRoute
+  '/admin': typeof AdminRouteWithChildren
+  '/admin/diagnostic': typeof AdminDiagnosticRoute
   '/commande/$orderId': typeof CommandeOrderIdRoute
   '/commander/$appId': typeof CommanderAppIdRoute
   '/commande/succes/$orderId': typeof CommandeSuccesOrderIdRoute
@@ -67,7 +75,8 @@ export interface FileRoutesByTo {
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
-  '/admin': typeof AdminRoute
+  '/admin': typeof AdminRouteWithChildren
+  '/admin/diagnostic': typeof AdminDiagnosticRoute
   '/commande/$orderId': typeof CommandeOrderIdRoute
   '/commander/$appId': typeof CommanderAppIdRoute
   '/commande/succes/$orderId': typeof CommandeSuccesOrderIdRoute
@@ -78,6 +87,7 @@ export interface FileRouteTypes {
   fullPaths:
     | '/'
     | '/admin'
+    | '/admin/diagnostic'
     | '/commande/$orderId'
     | '/commander/$appId'
     | '/commande/succes/$orderId'
@@ -86,6 +96,7 @@ export interface FileRouteTypes {
   to:
     | '/'
     | '/admin'
+    | '/admin/diagnostic'
     | '/commande/$orderId'
     | '/commander/$appId'
     | '/commande/succes/$orderId'
@@ -94,6 +105,7 @@ export interface FileRouteTypes {
     | '__root__'
     | '/'
     | '/admin'
+    | '/admin/diagnostic'
     | '/commande/$orderId'
     | '/commander/$appId'
     | '/commande/succes/$orderId'
@@ -102,7 +114,7 @@ export interface FileRouteTypes {
 }
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
-  AdminRoute: typeof AdminRoute
+  AdminRoute: typeof AdminRouteWithChildren
   CommandeOrderIdRoute: typeof CommandeOrderIdRoute
   CommanderAppIdRoute: typeof CommanderAppIdRoute
   CommandeSuccesOrderIdRoute: typeof CommandeSuccesOrderIdRoute
@@ -139,6 +151,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof CommandeOrderIdRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/admin/diagnostic': {
+      id: '/admin/diagnostic'
+      path: '/diagnostic'
+      fullPath: '/admin/diagnostic'
+      preLoaderRoute: typeof AdminDiagnosticRouteImport
+      parentRoute: typeof AdminRoute
+    }
     '/commande/succes/$orderId': {
       id: '/commande/succes/$orderId'
       path: '/commande/succes/$orderId'
@@ -156,9 +175,19 @@ declare module '@tanstack/react-router' {
   }
 }
 
+interface AdminRouteChildren {
+  AdminDiagnosticRoute: typeof AdminDiagnosticRoute
+}
+
+const AdminRouteChildren: AdminRouteChildren = {
+  AdminDiagnosticRoute: AdminDiagnosticRoute,
+}
+
+const AdminRouteWithChildren = AdminRoute._addFileChildren(AdminRouteChildren)
+
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
-  AdminRoute: AdminRoute,
+  AdminRoute: AdminRouteWithChildren,
   CommandeOrderIdRoute: CommandeOrderIdRoute,
   CommanderAppIdRoute: CommanderAppIdRoute,
   CommandeSuccesOrderIdRoute: CommandeSuccesOrderIdRoute,
@@ -167,3 +196,13 @@ const rootRouteChildren: RootRouteChildren = {
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
   ._addFileTypes<FileRouteTypes>()
+
+import type { getRouter } from './router.tsx'
+import type { startInstance } from './start.ts'
+declare module '@tanstack/react-start' {
+  interface Register {
+    ssr: true
+    router: Awaited<ReturnType<typeof getRouter>>
+    config: Awaited<ReturnType<typeof startInstance.getOptions>>
+  }
+}
