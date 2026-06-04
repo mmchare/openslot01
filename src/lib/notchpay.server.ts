@@ -44,6 +44,15 @@ export async function initializeNotchPayment(
     };
   }
 
+  // Notch Pay attend un numéro purement numérique avec indicatif pays
+  // (ex: 237683179424). On retire +, espaces, tirets, parenthèses.
+  let phone = input.customer.phone.replace(/[^0-9]/g, "");
+  // Si le numéro local camerounais (9 chiffres commençant par 6 ou 2)
+  // est envoyé sans indicatif, on préfixe 237.
+  if (/^[62]\d{8}$/.test(phone)) {
+    phone = `237${phone}`;
+  }
+
   const res = await fetch(`${NOTCHPAY_BASE}/payments/initialize`, {
     method: "POST",
     headers: {
@@ -54,7 +63,7 @@ export async function initializeNotchPayment(
       amount: input.amountFcfa,
       currency: "XAF",
       email: input.customer.email,
-      phone: input.customer.phone,
+      phone,
       name: input.customer.name,
       reference: input.orderId,
       description: `OpenSlot — Commande ${input.orderId}`,
