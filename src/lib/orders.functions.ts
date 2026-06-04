@@ -63,6 +63,19 @@ export const createOrder = createServerFn({ method: "POST" })
       throw new Error("Impossible de créer la commande.");
     }
 
+    await logPaymentEvent({
+      order_id: order.id,
+      event_type: "order_created",
+      metadata: {
+        application_id: app.id,
+        application_name: app.name,
+        amount: app.price_fcfa,
+        product_type: app.product_type,
+        phone: data.client_whatsapp,
+        email: data.client_email,
+      },
+    });
+
     const host = getRequestHost();
     const protocol = host.startsWith("localhost") ? "http" : "https";
     const callbackUrl = `${protocol}://${host}/commande/succes/${order.id}`;
@@ -82,6 +95,13 @@ export const createOrder = createServerFn({ method: "POST" })
       .from("orders")
       .update({ notchpay_reference: pay.reference })
       .eq("id", order.id);
+
+    await logPaymentEvent({
+      order_id: order.id,
+      notchpay_reference: pay.reference,
+      event_type: "redirect_to_gateway",
+      metadata: { dev_mode: pay.dev_mode },
+    });
 
     return {
       order_id: order.id,
