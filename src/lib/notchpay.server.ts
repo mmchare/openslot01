@@ -8,6 +8,7 @@
 // a successful payment immediately so the full UX can be tested end-to-end.
 
 import { createHmac, timingSafeEqual } from "crypto";
+import { logPaymentEvent } from "./payment-events.server";
 
 const NOTCHPAY_BASE = "https://api.notchpay.co";
 
