@@ -80,6 +80,7 @@ function SuccessPage() {
           >
             Retour au catalogue
           </Link>
+          <SupportRef orderId={orderId} />
         </div>
       </div>
     );
@@ -104,6 +105,7 @@ function SuccessPage() {
           >
             Vérifier maintenant
           </button>
+          <SupportRef orderId={orderId} />
         </div>
       </div>
     );
