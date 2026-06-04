@@ -123,6 +123,12 @@ export const getOrderForSuccess = createServerFn({ method: "GET" })
 
     if (!order) return null;
 
+    await logPaymentEvent({
+      order_id: order.id,
+      event_type: "success_page_view",
+      metadata: { status: order.status },
+    });
+
     const appRel = order.applications as
       | {
           name: string;
