@@ -135,6 +135,39 @@ export type Database = {
           },
         ]
       }
+      payment_events: {
+        Row: {
+          created_at: string
+          event_type: string
+          id: string
+          level: string
+          message: string | null
+          metadata: Json | null
+          notchpay_reference: string | null
+          order_id: string | null
+        }
+        Insert: {
+          created_at?: string
+          event_type: string
+          id?: string
+          level?: string
+          message?: string | null
+          metadata?: Json | null
+          notchpay_reference?: string | null
+          order_id?: string | null
+        }
+        Update: {
+          created_at?: string
+          event_type?: string
+          id?: string
+          level?: string
+          message?: string | null
+          metadata?: Json | null
+          notchpay_reference?: string | null
+          order_id?: string | null
+        }
+        Relationships: []
+      }
       slots_stock: {
         Row: {
           account_email: string
