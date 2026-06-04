@@ -359,3 +359,121 @@ export const adminUpdateApkVersion = createServerFn({ method: "POST" })
     return { ok: true };
   });
 
+// ============================================================
+//  DIAGNOSTIC : événements de paiement
+// ============================================================
+
+// Récupère les événements de paiement par order_id (UUID complet ou les
+// 8 premiers caractères) ou par référence Notch Pay.
+export const adminGetPaymentEvents = createServerFn({ method: "POST" })
+  .inputValidator((input) =>
+    PasswordOnly.extend({
+      query: z.string().min(3).max(100),
+    }).parse(input),
+  )
+  .handler(async ({ data }) => {
+    checkPassword(data.password);
+    const q = data.query.trim();
+
+    // Trouve la commande par UUID exact, préfixe d'UUID, ou référence Notch Pay
+    let orderId: string | null = null;
+    let order: {
+      id: string;
+      status: string;
+      client_name: string;
+      client_whatsapp: string;
+      client_email: string;
+      amount_paid: number;
+      notchpay_reference: string | null;
+      created_at: string;
+    } | null = null;
+
+    const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+
+    if (uuidRegex.test(q)) {
+      const { data: o } = await supabaseAdmin
+        .from("orders")
+        .select(
+          "id, status, client_name, client_whatsapp, client_email, amount_paid, notchpay_reference, created_at",
+        )
+        .eq("id", q)
+        .maybeSingle();
+      order = o ?? null;
+      orderId = o?.id ?? null;
+    } else {
+      // Référence Notch Pay (peut commencer par DEV_)
+      const { data: o } = await supabaseAdmin
+        .from("orders")
+        .select(
+          "id, status, client_name, client_whatsapp, client_email, amount_paid, notchpay_reference, created_at",
+        )
+        .eq("notchpay_reference", q)
+        .maybeSingle();
+      if (o) {
+        order = o;
+        orderId = o.id;
+      } else {
+        // Préfixe d'UUID (au moins 8 chars)
+        const { data: list } = await supabaseAdmin
+          .from("orders")
+          .select(
+            "id, status, client_name, client_whatsapp, client_email, amount_paid, notchpay_reference, created_at",
+          )
+          .ilike("id", `${q}%`)
+          .limit(1);
+        if (list && list.length > 0) {
+          order = list[0];
+          orderId = list[0].id;
+        }
+      }
+    }
+
+    // Récupère les événements (par order_id et/ou référence)
+    let eventsQuery = supabaseAdmin
+      .from("payment_events")
+      .select("id, order_id, notchpay_reference, event_type, level, message, metadata, created_at")
+      .order("created_at", { ascending: true })
+      .limit(200);
+
+    if (orderId) {
+      eventsQuery = eventsQuery.eq("order_id", orderId);
+    } else {
+      eventsQuery = eventsQuery.eq("notchpay_reference", q);
+    }
+
+    const { data: events } = await eventsQuery;
+
+    return {
+      order,
+      events: events ?? [],
+    };
+  });
+
+// Liste les commandes récentes (24h) avec statut, pour le tableau de bord diagnostic.
+export const adminListRecentPaymentOrders = createServerFn({ method: "POST" })
+  .inputValidator((input) => PasswordOnly.parse(input))
+  .handler(async ({ data }) => {
+    checkPassword(data.password);
+    const since = new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString();
+    const { data: orders, error } = await supabaseAdmin
+      .from("orders")
+      .select(
+        "id, status, client_name, client_whatsapp, amount_paid, notchpay_reference, created_at, applications(name)",
+      )
+      .gte("created_at", since)
+      .order("created_at", { ascending: false })
+      .limit(100);
+    if (error) throw new Error(error.message);
+    return (orders ?? []).map((o) => ({
+      id: o.id,
+      status: o.status,
+      client_name: o.client_name,
+      client_whatsapp: o.client_whatsapp,
+      amount_paid: o.amount_paid,
+      notchpay_reference: o.notchpay_reference,
+      created_at: o.created_at,
+      application_name:
+        (o.applications as { name: string } | null)?.name ?? "—",
+    }));
+  });
+
