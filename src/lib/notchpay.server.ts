@@ -8,6 +8,7 @@
 // a successful payment immediately so the full UX can be tested end-to-end.
 
 import { createHmac, timingSafeEqual } from "crypto";
+import { logPaymentEvent } from "./payment-events.server";
 
 const NOTCHPAY_BASE = "https://api.notchpay.co";
 
@@ -36,7 +37,13 @@ export async function initializeNotchPayment(
   // DEV MODE — no Notch Pay key configured yet.
   if (!key) {
     const ref = `DEV_${input.orderId}`;
-    // Direct success URL with a special dev query param the success page handles.
+    await logPaymentEvent({
+      order_id: input.orderId,
+      notchpay_reference: ref,
+      event_type: "notchpay_dev_mode",
+      level: "warn",
+      message: "NOTCHPAY_PUBLIC_KEY non configurée — paiement simulé.",
+    });
     return {
       reference: ref,
       authorization_url: `${input.callbackUrl}?reference=${ref}&dev=1`,
@@ -52,6 +59,17 @@ export async function initializeNotchPayment(
   if (/^[62]\d{8}$/.test(phone)) {
     phone = `237${phone}`;
   }
+
+  await logPaymentEvent({
+    order_id: input.orderId,
+    event_type: "notchpay_init_request",
+    metadata: {
+      amount: input.amountFcfa,
+      phone,
+      email: input.customer.email,
+      phone_raw_length: input.customer.phone.length,
+    },
+  });
 
   const res = await fetch(`${NOTCHPAY_BASE}/payments/initialize`, {
     method: "POST",
@@ -73,6 +91,13 @@ export async function initializeNotchPayment(
 
   if (!res.ok) {
     const text = await res.text();
+    await logPaymentEvent({
+      order_id: input.orderId,
+      event_type: "notchpay_init_error",
+      level: "error",
+      message: `Notch Pay init failed (${res.status})`,
+      metadata: { status: res.status, body: text.slice(0, 1000) },
+    });
     throw new Error(`Notch Pay init failed (${res.status}): ${text}`);
   }
 
@@ -82,8 +107,22 @@ export async function initializeNotchPayment(
   };
 
   if (!json.transaction?.reference || !json.authorization_url) {
+    await logPaymentEvent({
+      order_id: input.orderId,
+      event_type: "notchpay_init_error",
+      level: "error",
+      message: "Réponse Notch Pay invalide",
+      metadata: { json: json as unknown as Record<string, unknown> },
+    });
     throw new Error("Notch Pay returned an invalid response");
   }
+
+  await logPaymentEvent({
+    order_id: input.orderId,
+    notchpay_reference: json.transaction.reference,
+    event_type: "notchpay_init_success",
+    metadata: { authorization_url: json.authorization_url },
+  });
 
   return {
     reference: json.transaction.reference,

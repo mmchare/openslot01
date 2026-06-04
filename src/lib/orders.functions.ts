@@ -3,6 +3,7 @@ import { getRequestHost } from "@tanstack/react-start/server";
 import { z } from "zod";
 import { supabaseAdmin } from "@/integrations/supabase/client.server";
 import { initializeNotchPayment } from "./notchpay.server";
+import { logPaymentEvent } from "./payment-events.server";
 import type { OrderSuccessPayload } from "./types";
 
 const CreateOrderInput = z.object({
@@ -62,6 +63,19 @@ export const createOrder = createServerFn({ method: "POST" })
       throw new Error("Impossible de créer la commande.");
     }
 
+    await logPaymentEvent({
+      order_id: order.id,
+      event_type: "order_created",
+      metadata: {
+        application_id: app.id,
+        application_name: app.name,
+        amount: app.price_fcfa,
+        product_type: app.product_type,
+        phone: data.client_whatsapp,
+        email: data.client_email,
+      },
+    });
+
     const host = getRequestHost();
     const protocol = host.startsWith("localhost") ? "http" : "https";
     const callbackUrl = `${protocol}://${host}/commande/succes/${order.id}`;
@@ -82,6 +96,13 @@ export const createOrder = createServerFn({ method: "POST" })
       .update({ notchpay_reference: pay.reference })
       .eq("id", order.id);
 
+    await logPaymentEvent({
+      order_id: order.id,
+      notchpay_reference: pay.reference,
+      event_type: "redirect_to_gateway",
+      metadata: { dev_mode: pay.dev_mode },
+    });
+
     return {
       order_id: order.id,
       authorization_url: pay.authorization_url,
@@ -101,6 +122,12 @@ export const getOrderForSuccess = createServerFn({ method: "GET" })
       .maybeSingle();
 
     if (!order) return null;
+
+    await logPaymentEvent({
+      order_id: order.id,
+      event_type: "success_page_view",
+      metadata: { status: order.status },
+    });
 
     const appRel = order.applications as
       | {
@@ -163,7 +190,22 @@ export const simulateDevPayment = createServerFn({ method: "POST" })
     const { error } = await supabaseAdmin.rpc("allocate_slot_for_order", {
       p_order_id: order.id,
     });
-    if (error) throw new Error(error.message);
+    if (error) {
+      await logPaymentEvent({
+        order_id: order.id,
+        notchpay_reference: order.notchpay_reference,
+        event_type: "dev_simulate_error",
+        level: "error",
+        message: error.message,
+      });
+      throw new Error(error.message);
+    }
+
+    await logPaymentEvent({
+      order_id: order.id,
+      notchpay_reference: order.notchpay_reference,
+      event_type: "dev_simulate_success",
+    });
 
     try {
       const { count } = await supabaseAdmin
