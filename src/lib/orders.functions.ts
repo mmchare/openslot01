@@ -184,7 +184,22 @@ export const simulateDevPayment = createServerFn({ method: "POST" })
     const { error } = await supabaseAdmin.rpc("allocate_slot_for_order", {
       p_order_id: order.id,
     });
-    if (error) throw new Error(error.message);
+    if (error) {
+      await logPaymentEvent({
+        order_id: order.id,
+        notchpay_reference: order.notchpay_reference,
+        event_type: "dev_simulate_error",
+        level: "error",
+        message: error.message,
+      });
+      throw new Error(error.message);
+    }
+
+    await logPaymentEvent({
+      order_id: order.id,
+      notchpay_reference: order.notchpay_reference,
+      event_type: "dev_simulate_success",
+    });
 
     try {
       const { count } = await supabaseAdmin
