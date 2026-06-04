@@ -70,7 +70,9 @@ export async function logPaymentEvent(input: LogPaymentEventInput): Promise<void
       event_type: input.event_type,
       level: input.level ?? "info",
       message: input.message ?? null,
-      metadata: input.metadata ? sanitizeMetadata(input.metadata) : null,
+      metadata: input.metadata
+        ? (sanitizeMetadata(input.metadata) as unknown as never)
+        : null,
     });
   } catch (err) {
     // Never let logging break the payment flow.
