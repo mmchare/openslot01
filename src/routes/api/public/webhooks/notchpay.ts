@@ -1,6 +1,7 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { supabaseAdmin } from "@/integrations/supabase/client.server";
 import { verifyNotchPaySignature } from "@/lib/notchpay.server";
+import { logPaymentEvent } from "@/lib/payment-events.server";
 import {
   sendTelegramAlert,
   buildStockAlertMessage,
@@ -23,6 +24,12 @@ export const Route = createFileRoute("/api/public/webhooks/notchpay")({
         // Sécurité: signature obligatoire si NOTCHPAY_HASH est configuré.
         if (process.env.NOTCHPAY_HASH) {
           if (!verifyNotchPaySignature(rawBody, signature)) {
+            await logPaymentEvent({
+              event_type: "webhook_invalid_signature",
+              level: "error",
+              message: "Signature Notch Pay invalide",
+              metadata: { body_preview: rawBody.slice(0, 500) },
+            });
             return new Response("Invalid signature", { status: 401 });
           }
         }
@@ -37,11 +44,28 @@ export const Route = createFileRoute("/api/public/webhooks/notchpay")({
         try {
           payload = JSON.parse(rawBody);
         } catch {
+          await logPaymentEvent({
+            event_type: "webhook_received",
+            level: "error",
+            message: "JSON invalide",
+            metadata: { body_preview: rawBody.slice(0, 500) },
+          });
           return new Response("Invalid JSON", { status: 400 });
         }
 
         const reference = payload.data?.reference;
         const status = payload.data?.status;
+
+        await logPaymentEvent({
+          notchpay_reference: reference ?? null,
+          event_type: "webhook_received",
+          message: `event=${payload.event ?? "?"} status=${status ?? "?"}`,
+          metadata: {
+            event: payload.event,
+            status,
+            reference,
+          },
+        });
 
         if (!reference || !status) {
           return new Response("Missing fields", { status: 400 });
@@ -55,6 +79,11 @@ export const Route = createFileRoute("/api/public/webhooks/notchpay")({
           .maybeSingle();
 
         if (!order) {
+          await logPaymentEvent({
+            notchpay_reference: reference,
+            event_type: "webhook_order_not_found",
+            level: "error",
+          });
           return new Response("Order not found", { status: 404 });
         }
 
@@ -71,8 +100,21 @@ export const Route = createFileRoute("/api/public/webhooks/notchpay")({
           );
           if (allocErr) {
             console.error("[notchpay webhook] allocation error:", allocErr);
+            await logPaymentEvent({
+              order_id: order.id,
+              notchpay_reference: reference,
+              event_type: "webhook_allocation_error",
+              level: "error",
+              message: allocErr.message,
+            });
             return new Response("Allocation failed", { status: 500 });
           }
+
+          await logPaymentEvent({
+            order_id: order.id,
+            notchpay_reference: reference,
+            event_type: "webhook_allocation_success",
+          });
 
           // Vérifie le stock restant pour alerte
           const { count } = await supabaseAdmin
@@ -96,6 +138,13 @@ export const Route = createFileRoute("/api/public/webhooks/notchpay")({
             .from("orders")
             .update({ status: "echoue" })
             .eq("id", order.id);
+          await logPaymentEvent({
+            order_id: order.id,
+            notchpay_reference: reference,
+            event_type: "webhook_payment_failed",
+            level: "warn",
+            message: `status=${status}`,
+          });
         }
 
         return new Response("ok", { status: 200 });
