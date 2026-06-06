@@ -107,13 +107,19 @@ export const createOrder = createServerFn({ method: "POST" })
       order_id: order.id,
       notchpay_reference: pay.reference,
       event_type: "redirect_to_gateway",
-      metadata: { dev_mode: pay.dev_mode },
+      metadata: {
+        dev_mode: pay.dev_mode,
+        direct_status: pay.direct_status,
+        direct_message: pay.direct_message,
+      },
     });
 
     return {
       order_id: order.id,
       authorization_url: pay.authorization_url,
       dev_mode: pay.dev_mode,
+      direct_status: pay.direct_status,
+      direct_message: pay.direct_message,
     };
   });
 
