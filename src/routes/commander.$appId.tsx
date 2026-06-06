@@ -59,14 +59,32 @@ function OrderPage() {
   const onSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError(null);
+
+    const trimmedName = name.trim();
+    const trimmedEmail = email.trim();
+    const cleanedPhone = phone.trim().replace(/\s+/g, "");
+
+    if (trimmedName.length < 2) {
+      setError("Merci d'entrer ton nom complet (au moins 2 caractères).");
+      return;
+    }
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(trimmedEmail)) {
+      setError("Merci d'entrer une adresse email valide.");
+      return;
+    }
+    if (!/^\+?[0-9]{8,20}$/.test(cleanedPhone)) {
+      setError("Numéro WhatsApp invalide. Format attendu : +237 6xx xxx xxx");
+      return;
+    }
+
     setLoading(true);
     try {
       const res = await createOrderFn({
         data: {
           application_id: fresh.id,
-          client_name: name.trim(),
-          client_email: email.trim(),
-          client_whatsapp: phone.trim().replace(/\s+/g, ""),
+          client_name: trimmedName,
+          client_email: trimmedEmail,
+          client_whatsapp: cleanedPhone,
         },
       });
       if (res.dev_mode) {
