@@ -31,6 +31,12 @@ export interface InitializePaymentResult {
   direct_message?: string;
 }
 
+type DirectChargeResponse = {
+  action?: string;
+  message?: string;
+  transaction?: { status?: string; message?: string };
+};
+
 export async function initializeNotchPayment(
   input: InitializePaymentInput,
 ): Promise<InitializePaymentResult> {
@@ -150,13 +156,9 @@ export async function initializeNotchPayment(
       },
     );
     const chargeText = await chargeRes.text();
-    let chargeJson: {
-      action?: string;
-      message?: string;
-      transaction?: { status?: string; message?: string };
-    } | null = null;
+    let chargeJson: DirectChargeResponse | null = null;
     try {
-      chargeJson = JSON.parse(chargeText) as typeof chargeJson;
+      chargeJson = JSON.parse(chargeText) as DirectChargeResponse;
     } catch {
       // Keep raw text in diagnostics below.
     }
