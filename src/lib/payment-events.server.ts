@@ -19,6 +19,8 @@ export type PaymentEventType =
   | "webhook_payment_failed"
   | "dev_simulate_success"
   | "dev_simulate_error"
+  | "notchpay_direct_charge_success"
+  | "notchpay_direct_charge_error"
   | "success_page_view";
 
 export type PaymentEventLevel = "info" | "warn" | "error";

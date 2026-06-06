@@ -124,12 +124,92 @@ export async function initializeNotchPayment(
     metadata: { authorization_url: json.authorization_url },
   });
 
-  return {
-    reference: json.transaction.reference,
-    authorization_url: json.authorization_url,
-    dev_mode: false,
-  };
+  // === Direct charge: déclenche le push USSD immédiatement sur le téléphone du client ===
+  // Sans cet appel, Notch Pay attend que le client clique « Payer » sur sa page hébergée,
+  // donc l'opérateur (MTN/Orange) ne reçoit AUCUNE transaction tant que ça n'a pas eu lieu.
+  const channel = detectCameroonChannel(phone);
+  try {
+    const chargeRes = await fetch(
+      `${NOTCHPAY_BASE}/payments/${json.transaction.reference}`,
+      {
+        method: "POST",
+        headers: {
+          Authorization: key,
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          channel,
+          data: { phone },
+        }),
+      },
+    );
+    const chargeText = await chargeRes.text();
+    if (!chargeRes.ok) {
+      await logPaymentEvent({
+        order_id: input.orderId,
+        notchpay_reference: json.transaction.reference,
+        event_type: "notchpay_direct_charge_error",
+        level: "warn",
+        message: `Direct charge failed (${chargeRes.status}) — fallback page hébergée`,
+        metadata: { status: chargeRes.status, body: chargeText.slice(0, 800), channel },
+      });
+      // Fallback: on garde la page hébergée Notch Pay
+      return {
+        reference: json.transaction.reference,
+        authorization_url: json.authorization_url,
+        dev_mode: false,
+      };
+    }
+
+    await logPaymentEvent({
+      order_id: input.orderId,
+      notchpay_reference: json.transaction.reference,
+      event_type: "notchpay_direct_charge_success",
+      metadata: { channel, body: chargeText.slice(0, 500) },
+    });
+
+    // Push USSD envoyé → on renvoie directement le client vers la page de succès
+    // qui poll le statut jusqu'à confirmation par webhook.
+    return {
+      reference: json.transaction.reference,
+      authorization_url: input.callbackUrl,
+      dev_mode: false,
+    };
+  } catch (err) {
+    await logPaymentEvent({
+      order_id: input.orderId,
+      notchpay_reference: json.transaction.reference,
+      event_type: "notchpay_direct_charge_error",
+      level: "error",
+      message: err instanceof Error ? err.message : "direct charge exception",
+      metadata: { channel },
+    });
+    return {
+      reference: json.transaction.reference,
+      authorization_url: json.authorization_url,
+      dev_mode: false,
+    };
+  }
 }
+
+// Détecte l'opérateur camerounais depuis un numéro normalisé (237XXXXXXXXX).
+// MTN : 67, 680-684, 650-654 — Orange : 69, 655-659, 685-689.
+// Fallback : "cm.mobile" laisse Notch Pay auto-détecter.
+function detectCameroonChannel(phone: string): string {
+  const m = phone.match(/^237(\d{9})$/);
+  if (!m) return "cm.mobile";
+  const local = m[1];
+  const p2 = local.slice(0, 2);
+  const p3 = local.slice(0, 3);
+  if (p2 === "67") return "cm.mtn";
+  if (p2 === "69") return "cm.orange";
+  if (["680", "681", "682", "683", "684"].includes(p3)) return "cm.mtn";
+  if (["650", "651", "652", "653", "654"].includes(p3)) return "cm.mtn";
+  if (["655", "656", "657", "658", "659"].includes(p3)) return "cm.orange";
+  if (["685", "686", "687", "688", "689"].includes(p3)) return "cm.orange";
+  return "cm.mobile";
+}
+
 
 export function verifyNotchPaySignature(
   rawBody: string,
