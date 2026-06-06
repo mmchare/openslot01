@@ -1,0 +1,1 @@
+ALTER VIEW public.applications_catalog SET (security_invoker = true);
