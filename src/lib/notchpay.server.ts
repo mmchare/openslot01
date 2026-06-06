@@ -27,6 +27,8 @@ export interface InitializePaymentResult {
   reference: string;
   authorization_url: string;
   dev_mode: boolean;
+  direct_status?: "requires_manual_confirmation" | "processing" | "fallback";
+  direct_message?: string;
 }
 
 export async function initializeNotchPayment(
@@ -139,11 +141,25 @@ export async function initializeNotchPayment(
         },
         body: JSON.stringify({
           channel,
-          data: { phone },
+          data: {
+            phone,
+            account_number: phone,
+            country: "CM",
+          },
         }),
       },
     );
     const chargeText = await chargeRes.text();
+    let chargeJson: {
+      action?: string;
+      message?: string;
+      transaction?: { status?: string; message?: string };
+    } | null = null;
+    try {
+      chargeJson = JSON.parse(chargeText) as typeof chargeJson;
+    } catch {
+      // Keep raw text in diagnostics below.
+    }
     if (!chargeRes.ok) {
       await logPaymentEvent({
         order_id: input.orderId,
@@ -174,6 +190,8 @@ export async function initializeNotchPayment(
       reference: json.transaction.reference,
       authorization_url: input.callbackUrl,
       dev_mode: false,
+      direct_status: chargeJson?.action === "confirm" ? "requires_manual_confirmation" : "processing",
+      direct_message: chargeJson?.message ?? chargeJson?.transaction?.message,
     };
   } catch (err) {
     await logPaymentEvent({
