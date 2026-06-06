@@ -67,6 +67,7 @@ export async function initializeNotchPayment(
   if (/^[62]\d{8}$/.test(phone)) {
     phone = `237${phone}`;
   }
+  const internationalPhone = `+${phone}`;
 
   await logPaymentEvent({
     order_id: input.orderId,
@@ -148,8 +149,8 @@ export async function initializeNotchPayment(
         body: JSON.stringify({
           channel,
           data: {
-            phone,
-            account_number: phone,
+            phone: internationalPhone,
+            account_number: internationalPhone,
             country: "CM",
           },
         }),

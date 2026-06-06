@@ -22,6 +22,8 @@ import { SiteFooter } from "@/components/SiteFooter";
 export const Route = createFileRoute("/commande/succes/$orderId")({
   validateSearch: z.object({
     dev: z.union([z.literal(1), z.literal("1")]).optional(),
+    confirm: z.union([z.literal(1), z.literal("1")]).optional(),
+    instruction: z.string().optional(),
   }),
   head: () => ({
     meta: [{ title: "Commande confirmée — OpenSlot" }],
@@ -31,7 +33,7 @@ export const Route = createFileRoute("/commande/succes/$orderId")({
 
 function SuccessPage() {
   const { orderId } = Route.useParams();
-  const { dev } = Route.useSearch();
+  const { dev, confirm, instruction } = Route.useSearch();
   const simulate = useServerFn(simulateDevPayment);
   const fetchOrder = useServerFn(getOrderForSuccess);
   const [devTriggered, setDevTriggered] = useState(false);
@@ -99,6 +101,14 @@ function SuccessPage() {
             On attend la confirmation de ton paiement. Cette page se met à jour
             automatiquement.
           </p>
+          {confirm && (
+            <div className="mx-auto mt-4 max-w-sm rounded-xl border border-primary/30 bg-primary/10 px-4 py-3 text-left text-sm text-foreground">
+              <strong className="block text-primary">Action à valider sur ton téléphone</strong>
+              <span className="mt-1 block text-muted-foreground">
+                {instruction || "Compose le code indiqué par ton opérateur, puis valide la transaction."}
+              </span>
+            </div>
+          )}
           <button
             onClick={() => refetch()}
             className="mt-4 text-sm text-primary underline"
