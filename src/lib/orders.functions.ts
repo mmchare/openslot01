@@ -15,6 +15,7 @@ const CreateOrderInput = z.object({
     .min(8)
     .max(20)
     .regex(/^\+?[0-9\s]+$/, "Numéro invalide"),
+  origin: z.string().url().optional(),
 });
 
 export const createOrder = createServerFn({ method: "POST" })
