@@ -95,6 +95,15 @@ function OrderPage() {
           params: { orderId: res.order_id },
           search: { dev: 1 },
         });
+      } else if (res.direct_status === "requires_manual_confirmation") {
+        navigate({
+          to: "/commande/succes/$orderId",
+          params: { orderId: res.order_id },
+          search: {
+            confirm: 1,
+            instruction: res.direct_message ?? "Compose le code indiqué par ton opérateur, puis valide la transaction.",
+          },
+        });
       } else {
         window.location.href = res.authorization_url;
       }
