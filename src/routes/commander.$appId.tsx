@@ -85,6 +85,7 @@ function OrderPage() {
           client_name: trimmedName,
           client_email: trimmedEmail,
           client_whatsapp: cleanedPhone,
+          origin: window.location.origin,
         },
       });
       if (res.dev_mode) {

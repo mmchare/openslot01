@@ -15,6 +15,7 @@ const CreateOrderInput = z.object({
     .min(8)
     .max(20)
     .regex(/^\+?[0-9\s]+$/, "Numéro invalide"),
+  origin: z.string().url().optional(),
 });
 
 export const createOrder = createServerFn({ method: "POST" })
@@ -76,9 +77,15 @@ export const createOrder = createServerFn({ method: "POST" })
       },
     });
 
-    const host = getRequestHost();
-    const protocol = host.startsWith("localhost") ? "http" : "https";
-    const callbackUrl = `${protocol}://${host}/commande/succes/${order.id}`;
+    // Préférer l'origine envoyée par le client (window.location.origin)
+    // car getRequestHost() renvoie le host interne du worker (ex: localhost:8080).
+    let baseUrl = data.origin?.replace(/\/+$/, "");
+    if (!baseUrl) {
+      const host = getRequestHost();
+      const protocol = host.startsWith("localhost") ? "http" : "https";
+      baseUrl = `${protocol}://${host}`;
+    }
+    const callbackUrl = `${baseUrl}/commande/succes/${order.id}`;
 
     const pay = await initializeNotchPayment({
       orderId: order.id,
