@@ -1,11 +1,15 @@
 // Notch Pay API helpers (server-only).
 // Docs: https://docs.notchpay.co
-// Required runtime env (added via secrets when the user is ready):
-//   - NOTCHPAY_PUBLIC_KEY
-//   - NOTCHPAY_HASH        (webhook signature secret)
+// Flow standard documenté :
+//   1) POST /payments/initialize  → renvoie { transaction.reference, authorization_url }
+//   2) Le client est redirigé vers authorization_url (page hébergée Notch Pay)
+//      où il choisit MTN MoMo / Orange Money et entre son PIN.
+//   3) Notch Pay POST /api/public/webhooks/notchpay (signature HMAC-SHA256).
 //
-// If NOTCHPAY_PUBLIC_KEY is missing, we fall back to DEV mode that simulates
-// a successful payment immediately so the full UX can be tested end-to-end.
+// Env requis en production :
+//   - NOTCHPAY_PUBLIC_KEY
+//   - NOTCHPAY_HASH        (secret de signature webhook)
+// Sans NOTCHPAY_PUBLIC_KEY → mode DEV : paiement simulé.
 
 import { createHmac, timingSafeEqual } from "crypto";
 import { logPaymentEvent } from "./payment-events.server";
@@ -27,22 +31,14 @@ export interface InitializePaymentResult {
   reference: string;
   authorization_url: string;
   dev_mode: boolean;
-  direct_status?: "requires_manual_confirmation" | "processing" | "fallback";
-  direct_message?: string;
 }
-
-type DirectChargeResponse = {
-  action?: string;
-  message?: string;
-  transaction?: { status?: string; message?: string };
-};
 
 export async function initializeNotchPayment(
   input: InitializePaymentInput,
 ): Promise<InitializePaymentResult> {
   const key = process.env.NOTCHPAY_PUBLIC_KEY;
 
-  // DEV MODE — no Notch Pay key configured yet.
+  // DEV MODE — pas de clé Notch Pay configurée.
   if (!key) {
     const ref = `DEV_${input.orderId}`;
     await logPaymentEvent({
@@ -62,12 +58,9 @@ export async function initializeNotchPayment(
   // Notch Pay attend un numéro purement numérique avec indicatif pays
   // (ex: 237683179424). On retire +, espaces, tirets, parenthèses.
   let phone = input.customer.phone.replace(/[^0-9]/g, "");
-  // Si le numéro local camerounais (9 chiffres commençant par 6 ou 2)
-  // est envoyé sans indicatif, on préfixe 237.
   if (/^[62]\d{8}$/.test(phone)) {
     phone = `237${phone}`;
   }
-  const internationalPhone = `+${phone}`;
 
   await logPaymentEvent({
     order_id: input.orderId,
@@ -76,7 +69,6 @@ export async function initializeNotchPayment(
       amount: input.amountFcfa,
       phone,
       email: input.customer.email,
-      phone_raw_length: input.customer.phone.length,
     },
   });
 
@@ -133,104 +125,12 @@ export async function initializeNotchPayment(
     metadata: { authorization_url: json.authorization_url },
   });
 
-  // === Direct charge: déclenche le push USSD immédiatement sur le téléphone du client ===
-  // Sans cet appel, Notch Pay attend que le client clique « Payer » sur sa page hébergée,
-  // donc l'opérateur (MTN/Orange) ne reçoit AUCUNE transaction tant que ça n'a pas eu lieu.
-  const channel = detectCameroonChannel(phone);
-  try {
-    const chargeRes = await fetch(
-      `${NOTCHPAY_BASE}/payments/${json.transaction.reference}`,
-      {
-        method: "POST",
-        headers: {
-          Authorization: key,
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
-          channel,
-          data: {
-            phone: internationalPhone,
-            account_number: internationalPhone,
-            country: "CM",
-          },
-        }),
-      },
-    );
-    const chargeText = await chargeRes.text();
-    let chargeJson: DirectChargeResponse | null = null;
-    try {
-      chargeJson = JSON.parse(chargeText) as DirectChargeResponse;
-    } catch {
-      // Keep raw text in diagnostics below.
-    }
-    if (!chargeRes.ok) {
-      await logPaymentEvent({
-        order_id: input.orderId,
-        notchpay_reference: json.transaction.reference,
-        event_type: "notchpay_direct_charge_error",
-        level: "warn",
-        message: `Direct charge failed (${chargeRes.status}) — fallback page hébergée`,
-        metadata: { status: chargeRes.status, body: chargeText.slice(0, 800), channel },
-      });
-      // Fallback: on garde la page hébergée Notch Pay
-      return {
-        reference: json.transaction.reference,
-        authorization_url: json.authorization_url,
-        dev_mode: false,
-      };
-    }
-
-    await logPaymentEvent({
-      order_id: input.orderId,
-      notchpay_reference: json.transaction.reference,
-      event_type: "notchpay_direct_charge_success",
-      metadata: { channel, body: chargeText.slice(0, 500) },
-    });
-
-    // Push USSD envoyé → on renvoie directement le client vers la page de succès
-    // qui poll le statut jusqu'à confirmation par webhook.
-    return {
-      reference: json.transaction.reference,
-      authorization_url: input.callbackUrl,
-      dev_mode: false,
-      direct_status: chargeJson?.action === "confirm" ? "requires_manual_confirmation" : "processing",
-      direct_message: chargeJson?.message ?? chargeJson?.transaction?.message,
-    };
-  } catch (err) {
-    await logPaymentEvent({
-      order_id: input.orderId,
-      notchpay_reference: json.transaction.reference,
-      event_type: "notchpay_direct_charge_error",
-      level: "error",
-      message: err instanceof Error ? err.message : "direct charge exception",
-      metadata: { channel },
-    });
-    return {
-      reference: json.transaction.reference,
-      authorization_url: json.authorization_url,
-      dev_mode: false,
-    };
-  }
+  return {
+    reference: json.transaction.reference,
+    authorization_url: json.authorization_url,
+    dev_mode: false,
+  };
 }
-
-// Détecte l'opérateur camerounais depuis un numéro normalisé (237XXXXXXXXX).
-// MTN : 67, 680-684, 650-654 — Orange : 69, 655-659, 685-689.
-// Fallback : "cm.mobile" laisse Notch Pay auto-détecter.
-function detectCameroonChannel(phone: string): string {
-  const m = phone.match(/^237(\d{9})$/);
-  if (!m) return "cm.mobile";
-  const local = m[1];
-  const p2 = local.slice(0, 2);
-  const p3 = local.slice(0, 3);
-  if (p2 === "67") return "cm.mtn";
-  if (p2 === "69") return "cm.orange";
-  if (["680", "681", "682", "683", "684"].includes(p3)) return "cm.mtn";
-  if (["650", "651", "652", "653", "654"].includes(p3)) return "cm.mtn";
-  if (["655", "656", "657", "658", "659"].includes(p3)) return "cm.orange";
-  if (["685", "686", "687", "688", "689"].includes(p3)) return "cm.orange";
-  return "cm.mobile";
-}
-
 
 export function verifyNotchPaySignature(
   rawBody: string,
