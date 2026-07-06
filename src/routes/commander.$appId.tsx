@@ -1,13 +1,32 @@
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { useSuspenseQuery } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import { ArrowLeft, Loader2, Lock } from "lucide-react";
 import { getApplicationById } from "@/lib/catalog.functions";
 import { createOrder } from "@/lib/orders.functions";
 import { AppIcon } from "@/components/AppIcon";
 import { SiteHeader } from "@/components/SiteHeader";
 import { SiteFooter } from "@/components/SiteFooter";
+
+type Channel = "cm.mtn" | "cm.orange";
+
+// Devine l'opérateur camerounais à partir du numéro (préfixes officiels).
+function detectChannel(phone: string): Channel | null {
+  const digits = phone.replace(/[^0-9]/g, "");
+  const local = digits.startsWith("237") ? digits.slice(3) : digits;
+  if (local.length < 3) return null;
+  const p2 = local.slice(0, 2);
+  const p3 = local.slice(0, 3);
+  if (p2 === "67") return "cm.mtn";
+  if (p2 === "69") return "cm.orange";
+  if (["680", "681", "682", "683", "684"].includes(p3)) return "cm.mtn";
+  if (["650", "651", "652", "653", "654"].includes(p3)) return "cm.mtn";
+  if (["655", "656", "657", "658", "659"].includes(p3)) return "cm.orange";
+  if (["685", "686", "687", "688", "689"].includes(p3)) return "cm.orange";
+  return null;
+}
+
 
 export const Route = createFileRoute("/commander/$appId")({
   head: () => ({
@@ -39,8 +58,12 @@ function OrderPage() {
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
   const [phone, setPhone] = useState("+237");
+  const [channel, setChannel] = useState<Channel | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+
+  const detected = useMemo(() => detectChannel(phone), [phone]);
+  const effectiveChannel: Channel | null = channel ?? detected;
 
   if (!fresh) {
     return (
@@ -76,6 +99,10 @@ function OrderPage() {
       setError("Numéro WhatsApp invalide. Format attendu : +237 6xx xxx xxx");
       return;
     }
+    if (!effectiveChannel) {
+      setError("Choisis ton opérateur Mobile Money (MTN ou Orange).");
+      return;
+    }
 
     setLoading(true);
     try {
@@ -85,25 +112,26 @@ function OrderPage() {
           client_name: trimmedName,
           client_email: trimmedEmail,
           client_whatsapp: cleanedPhone,
+          channel: effectiveChannel,
           origin: window.location.origin,
         },
       });
-      if (res.dev_mode) {
-        // Pas de clé Notch Pay → redirection directe (paiement simulé sur la page de succès)
-        navigate({
-          to: "/commande/succes/$orderId",
-          params: { orderId: res.order_id },
-          search: { dev: 1 },
-        });
-      } else {
-        // Redirection vers la page hébergée Notch Pay (MoMo / Orange Money)
-        window.location.href = res.authorization_url;
-      }
+      // Le prompt USSD est déjà parti sur le téléphone du client.
+      // On l'amène sur la page d'attente qui poll le statut.
+      navigate({
+        to: "/commande/succes/$orderId",
+        params: { orderId: res.order_id },
+        search: {
+          confirm: 1,
+          instruction: res.instruction,
+        },
+      });
     } catch (err) {
       setError(err instanceof Error ? err.message : "Une erreur est survenue.");
       setLoading(false);
     }
   };
+
 
   return (
     <div className="min-h-screen">
@@ -171,6 +199,49 @@ function OrderPage() {
                   className="input"
                 />
               </Field>
+
+              <div>
+                <label className="block text-sm font-medium">
+                  Opérateur Mobile Money
+                </label>
+                <p className="mt-1 text-xs text-muted-foreground">
+                  On envoie un prompt directement sur ce numéro pour valider avec ton PIN.
+                </p>
+                <div className="mt-2 grid grid-cols-2 gap-2">
+                  {(
+                    [
+                      { id: "cm.mtn" as const, label: "MTN MoMo", color: "#FFCC00" },
+                      { id: "cm.orange" as const, label: "Orange Money", color: "#FF6600" },
+                    ]
+                  ).map((op) => {
+                    const active = effectiveChannel === op.id;
+                    const isDetected = detected === op.id && channel === null;
+                    return (
+                      <button
+                        key={op.id}
+                        type="button"
+                        onClick={() => setChannel(op.id)}
+                        className={`relative flex items-center justify-center gap-2 rounded-xl border px-3 py-3 text-sm font-medium transition ${
+                          active
+                            ? "border-primary bg-primary/10 text-foreground"
+                            : "border-border bg-surface text-muted-foreground hover:border-primary/40"
+                        }`}
+                      >
+                        <span
+                          className="inline-block h-3 w-3 rounded-full"
+                          style={{ background: op.color }}
+                        />
+                        {op.label}
+                        {isDetected && (
+                          <span className="absolute -top-2 right-2 rounded-full bg-primary px-1.5 py-0.5 text-[10px] font-semibold text-primary-foreground">
+                            détecté
+                          </span>
+                        )}
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
             </div>
 
             {error && (
@@ -186,12 +257,13 @@ function OrderPage() {
             >
               {loading ? (
                 <>
-                  <Loader2 className="h-4 w-4 animate-spin" /> Redirection…
+                  <Loader2 className="h-4 w-4 animate-spin" /> Envoi du prompt…
                 </>
               ) : (
-                <>Procéder au paiement · {fresh.price_fcfa.toLocaleString("fr-FR")} FCFA</>
+                <>Payer · {fresh.price_fcfa.toLocaleString("fr-FR")} FCFA</>
               )}
             </button>
+
 
             <div className="mt-4 flex items-center justify-center gap-2 text-xs text-muted-foreground">
               <Lock className="h-3 w-3" /> Paiement sécurisé Notch Pay · MTN MoMo & Orange Money

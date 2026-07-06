@@ -1,23 +1,52 @@
 // Notch Pay API helpers (server-only).
-// Docs: https://docs.notchpay.co
-// Flow standard documenté :
-//   1) POST /payments/initialize  → renvoie { transaction.reference, authorization_url }
-//   2) Le client est redirigé vers authorization_url (page hébergée Notch Pay)
-//      où il choisit MTN MoMo / Orange Money et entre son PIN.
-//   3) Notch Pay POST /api/public/webhooks/notchpay (signature HMAC-SHA256).
+// Docs: https://developer.notchpay.co/accept-payments/charge
 //
-// Env requis en production :
-//   - NOTCHPAY_PUBLIC_KEY
-//   - NOTCHPAY_HASH        (secret de signature webhook)
-// Sans NOTCHPAY_PUBLIC_KEY → mode DEV : paiement simulé.
+// Flow Direct Charge :
+//   1) POST /payments  → renvoie { transaction.reference }
+//   2) POST /payments/{reference}  { channel, data: { phone } }
+//      → Notch Pay pousse un prompt USSD sur le téléphone du client.
+//   3) Le client valide (PIN Mobile Money). Notch Pay POST notre webhook
+//      /api/public/webhooks/notchpay (HMAC-SHA256 sur le body brut).
+//
+// Env requis :
+//   - NOTCHPAY_PUBLIC_KEY  (Authorization header)
+//   - NOTCHPAY_HASH        (secret HMAC webhook)
 
 import { createHmac, timingSafeEqual } from "crypto";
 import { logPaymentEvent } from "./payment-events.server";
 
 const NOTCHPAY_BASE = "https://api.notchpay.co";
 
+export type MobileMoneyChannel = "cm.mtn" | "cm.orange";
+
 export function isNotchPayConfigured(): boolean {
   return Boolean(process.env.NOTCHPAY_PUBLIC_KEY);
+}
+
+// Devine l'opérateur camerounais à partir du numéro.
+// MTN CM: 67, 680-684, 650-654
+// Orange CM: 69, 655-659, 685-689
+export function detectCameroonChannel(phone: string): MobileMoneyChannel | null {
+  const digits = phone.replace(/[^0-9]/g, "");
+  const local = digits.startsWith("237") ? digits.slice(3) : digits;
+  if (local.length < 3) return null;
+  const p2 = local.slice(0, 2);
+  const p3 = local.slice(0, 3);
+  if (p2 === "67") return "cm.mtn";
+  if (p2 === "69") return "cm.orange";
+  if (["680", "681", "682", "683", "684"].includes(p3)) return "cm.mtn";
+  if (["650", "651", "652", "653", "654"].includes(p3)) return "cm.mtn";
+  if (["655", "656", "657", "658", "659"].includes(p3)) return "cm.orange";
+  if (["685", "686", "687", "688", "689"].includes(p3)) return "cm.orange";
+  return null;
+}
+
+// Notch Pay attend un numéro E.164 : `+237XXXXXXXXX`.
+export function normalizeCameroonPhone(raw: string): string {
+  const digits = raw.replace(/[^0-9]/g, "");
+  if (digits.startsWith("237")) return `+${digits}`;
+  if (digits.length === 9) return `+237${digits}`;
+  return `+${digits}`;
 }
 
 export interface InitializePaymentInput {
@@ -30,37 +59,17 @@ export interface InitializePaymentInput {
 export interface InitializePaymentResult {
   reference: string;
   authorization_url: string;
-  dev_mode: boolean;
 }
 
 export async function initializeNotchPayment(
   input: InitializePaymentInput,
 ): Promise<InitializePaymentResult> {
   const key = process.env.NOTCHPAY_PUBLIC_KEY;
-
-  // DEV MODE — pas de clé Notch Pay configurée.
   if (!key) {
-    const ref = `DEV_${input.orderId}`;
-    await logPaymentEvent({
-      order_id: input.orderId,
-      notchpay_reference: ref,
-      event_type: "notchpay_dev_mode",
-      level: "warn",
-      message: "NOTCHPAY_PUBLIC_KEY non configurée — paiement simulé.",
-    });
-    return {
-      reference: ref,
-      authorization_url: `${input.callbackUrl}?reference=${ref}&dev=1`,
-      dev_mode: true,
-    };
+    throw new Error("NOTCHPAY_PUBLIC_KEY manquant : contactez le support.");
   }
 
-  // Notch Pay attend un numéro purement numérique avec indicatif pays
-  // (ex: 237683179424). On retire +, espaces, tirets, parenthèses.
-  let phone = input.customer.phone.replace(/[^0-9]/g, "");
-  if (/^[62]\d{8}$/.test(phone)) {
-    phone = `237${phone}`;
-  }
+  const phone = normalizeCameroonPhone(input.customer.phone);
 
   await logPaymentEvent({
     order_id: input.orderId,
@@ -72,37 +81,40 @@ export async function initializeNotchPayment(
     },
   });
 
-  const res = await fetch(`${NOTCHPAY_BASE}/payments/initialize`, {
+  const res = await fetch(`${NOTCHPAY_BASE}/payments`, {
     method: "POST",
     headers: {
       Authorization: key,
       "Content-Type": "application/json",
+      Accept: "application/json",
     },
     body: JSON.stringify({
       amount: input.amountFcfa,
       currency: "XAF",
-      email: input.customer.email,
-      phone,
-      name: input.customer.name,
-      reference: input.orderId,
       description: `OpenSlot — Commande ${input.orderId}`,
+      reference: input.orderId,
       callback: input.callbackUrl,
+      customer: {
+        name: input.customer.name,
+        email: input.customer.email,
+        phone,
+      },
     }),
   });
 
+  const bodyText = await res.text();
   if (!res.ok) {
-    const text = await res.text();
     await logPaymentEvent({
       order_id: input.orderId,
       event_type: "notchpay_init_error",
       level: "error",
       message: `Notch Pay init failed (${res.status})`,
-      metadata: { status: res.status, body: text.slice(0, 1000) },
+      metadata: { status: res.status, body: bodyText.slice(0, 1000) },
     });
-    throw new Error(`Notch Pay init failed (${res.status}): ${text}`);
+    throw new Error(`Notch Pay init failed (${res.status}): ${bodyText}`);
   }
 
-  const json = (await res.json()) as {
+  const json = JSON.parse(bodyText) as {
     transaction?: { reference: string };
     authorization_url?: string;
   };
@@ -113,7 +125,7 @@ export async function initializeNotchPayment(
       event_type: "notchpay_init_error",
       level: "error",
       message: "Réponse Notch Pay invalide",
-      metadata: { json: json as unknown as Record<string, unknown> },
+      metadata: { body: bodyText.slice(0, 1000) },
     });
     throw new Error("Notch Pay returned an invalid response");
   }
@@ -128,7 +140,92 @@ export async function initializeNotchPayment(
   return {
     reference: json.transaction.reference,
     authorization_url: json.authorization_url,
-    dev_mode: false,
+  };
+}
+
+export interface DirectChargeInput {
+  reference: string;
+  channel: MobileMoneyChannel;
+  phone: string;
+  orderId: string;
+}
+
+export interface DirectChargeResult {
+  status: string;
+  message: string;
+  raw: unknown;
+}
+
+// Déclenche le prompt USSD sur le téléphone du client.
+export async function directChargeMobileMoney(
+  input: DirectChargeInput,
+): Promise<DirectChargeResult> {
+  const key = process.env.NOTCHPAY_PUBLIC_KEY;
+  if (!key) throw new Error("NOTCHPAY_PUBLIC_KEY manquant.");
+
+  const phone = normalizeCameroonPhone(input.phone);
+
+  const res = await fetch(
+    `${NOTCHPAY_BASE}/payments/${encodeURIComponent(input.reference)}`,
+    {
+      method: "POST",
+      headers: {
+        Authorization: key,
+        "Content-Type": "application/json",
+        Accept: "application/json",
+      },
+      body: JSON.stringify({
+        channel: input.channel,
+        data: { phone },
+      }),
+    },
+  );
+
+  const bodyText = await res.text();
+  let json: {
+    status?: string;
+    message?: string;
+    transaction?: { status?: string };
+  } = {};
+  try {
+    json = JSON.parse(bodyText);
+  } catch {
+    // keep bodyText for logging
+  }
+
+  if (!res.ok) {
+    await logPaymentEvent({
+      order_id: input.orderId,
+      notchpay_reference: input.reference,
+      event_type: "notchpay_direct_charge_error",
+      level: "error",
+      message: `Direct charge failed (${res.status})`,
+      metadata: {
+        status: res.status,
+        body: bodyText.slice(0, 1000),
+        channel: input.channel,
+      },
+    });
+    throw new Error(
+      json.message ||
+        `Impossible de déclencher le paiement (${res.status}). Vérifie ton numéro ${input.channel === "cm.mtn" ? "MTN" : "Orange"}.`,
+    );
+  }
+
+  await logPaymentEvent({
+    order_id: input.orderId,
+    notchpay_reference: input.reference,
+    event_type: "notchpay_direct_charge_success",
+    metadata: {
+      channel: input.channel,
+      status: json.transaction?.status ?? json.status,
+    },
+  });
+
+  return {
+    status: json.transaction?.status ?? json.status ?? "processing",
+    message: json.message ?? "Prompt envoyé sur le téléphone.",
+    raw: json,
   };
 }
 
