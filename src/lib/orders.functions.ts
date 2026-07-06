@@ -109,19 +109,27 @@ export const createOrder = createServerFn({ method: "POST" })
       .update({ notchpay_reference: pay.reference })
       .eq("id", order.id);
 
-    await logPaymentEvent({
-      order_id: order.id,
-      notchpay_reference: pay.reference,
-      event_type: "redirect_to_gateway",
-      metadata: { dev_mode: pay.dev_mode },
+    // Direct Charge — déclenche immédiatement le prompt USSD sur le téléphone.
+    // C'est ce qui fait apparaître la transaction en attente sur MTN MoMo / Orange Money.
+    const charge = await directChargeMobileMoney({
+      reference: pay.reference,
+      channel: data.channel as MobileMoneyChannel,
+      phone: data.client_whatsapp,
+      orderId: order.id,
     });
+
+    const instruction =
+      data.channel === "cm.orange"
+        ? "Compose *144# ou attends le prompt Orange Money puis entre ton PIN pour confirmer la transaction."
+        : "Un prompt MTN Mobile Money s'affiche sur ton téléphone. Entre ton PIN pour confirmer.";
 
     return {
       order_id: order.id,
-      authorization_url: pay.authorization_url,
-      dev_mode: pay.dev_mode,
+      status: charge.status,
+      instruction,
     };
   });
+
 
 export const getOrderForSuccess = createServerFn({ method: "GET" })
   .inputValidator((input) => z.object({ order_id: z.string().uuid() }).parse(input))
