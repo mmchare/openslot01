@@ -1,13 +1,32 @@
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { useSuspenseQuery } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import { ArrowLeft, Loader2, Lock } from "lucide-react";
 import { getApplicationById } from "@/lib/catalog.functions";
 import { createOrder } from "@/lib/orders.functions";
 import { AppIcon } from "@/components/AppIcon";
 import { SiteHeader } from "@/components/SiteHeader";
 import { SiteFooter } from "@/components/SiteFooter";
+
+type Channel = "cm.mtn" | "cm.orange";
+
+// Devine l'opérateur camerounais à partir du numéro (préfixes officiels).
+function detectChannel(phone: string): Channel | null {
+  const digits = phone.replace(/[^0-9]/g, "");
+  const local = digits.startsWith("237") ? digits.slice(3) : digits;
+  if (local.length < 3) return null;
+  const p2 = local.slice(0, 2);
+  const p3 = local.slice(0, 3);
+  if (p2 === "67") return "cm.mtn";
+  if (p2 === "69") return "cm.orange";
+  if (["680", "681", "682", "683", "684"].includes(p3)) return "cm.mtn";
+  if (["650", "651", "652", "653", "654"].includes(p3)) return "cm.mtn";
+  if (["655", "656", "657", "658", "659"].includes(p3)) return "cm.orange";
+  if (["685", "686", "687", "688", "689"].includes(p3)) return "cm.orange";
+  return null;
+}
+
 
 export const Route = createFileRoute("/commander/$appId")({
   head: () => ({
