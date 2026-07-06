@@ -2,7 +2,11 @@ import { createServerFn } from "@tanstack/react-start";
 import { getRequestHost } from "@tanstack/react-start/server";
 import { z } from "zod";
 import { supabaseAdmin } from "@/integrations/supabase/client.server";
-import { initializeNotchPayment } from "./notchpay.server";
+import {
+  directChargeMobileMoney,
+  initializeNotchPayment,
+  type MobileMoneyChannel,
+} from "./notchpay.server";
 import { logPaymentEvent } from "./payment-events.server";
 import type { OrderSuccessPayload } from "./types";
 
@@ -15,8 +19,10 @@ const CreateOrderInput = z.object({
     .min(8)
     .max(20)
     .regex(/^\+?[0-9\s]+$/, "Numéro invalide"),
+  channel: z.enum(["cm.mtn", "cm.orange"]),
   origin: z.string().url().optional(),
 });
+
 
 export const createOrder = createServerFn({ method: "POST" })
   .inputValidator((input) => CreateOrderInput.parse(input))
