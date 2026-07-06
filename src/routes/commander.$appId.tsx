@@ -199,6 +199,49 @@ function OrderPage() {
                   className="input"
                 />
               </Field>
+
+              <div>
+                <label className="block text-sm font-medium">
+                  Opérateur Mobile Money
+                </label>
+                <p className="mt-1 text-xs text-muted-foreground">
+                  On envoie un prompt directement sur ce numéro pour valider avec ton PIN.
+                </p>
+                <div className="mt-2 grid grid-cols-2 gap-2">
+                  {(
+                    [
+                      { id: "cm.mtn" as const, label: "MTN MoMo", color: "#FFCC00" },
+                      { id: "cm.orange" as const, label: "Orange Money", color: "#FF6600" },
+                    ]
+                  ).map((op) => {
+                    const active = effectiveChannel === op.id;
+                    const isDetected = detected === op.id && channel === null;
+                    return (
+                      <button
+                        key={op.id}
+                        type="button"
+                        onClick={() => setChannel(op.id)}
+                        className={`relative flex items-center justify-center gap-2 rounded-xl border px-3 py-3 text-sm font-medium transition ${
+                          active
+                            ? "border-primary bg-primary/10 text-foreground"
+                            : "border-border bg-surface text-muted-foreground hover:border-primary/40"
+                        }`}
+                      >
+                        <span
+                          className="inline-block h-3 w-3 rounded-full"
+                          style={{ background: op.color }}
+                        />
+                        {op.label}
+                        {isDetected && (
+                          <span className="absolute -top-2 right-2 rounded-full bg-primary px-1.5 py-0.5 text-[10px] font-semibold text-primary-foreground">
+                            détecté
+                          </span>
+                        )}
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
             </div>
 
             {error && (
@@ -214,12 +257,13 @@ function OrderPage() {
             >
               {loading ? (
                 <>
-                  <Loader2 className="h-4 w-4 animate-spin" /> Redirection…
+                  <Loader2 className="h-4 w-4 animate-spin" /> Envoi du prompt…
                 </>
               ) : (
-                <>Procéder au paiement · {fresh.price_fcfa.toLocaleString("fr-FR")} FCFA</>
+                <>Payer · {fresh.price_fcfa.toLocaleString("fr-FR")} FCFA</>
               )}
             </button>
+
 
             <div className="mt-4 flex items-center justify-center gap-2 text-xs text-muted-foreground">
               <Lock className="h-3 w-3" /> Paiement sécurisé Notch Pay · MTN MoMo & Orange Money
