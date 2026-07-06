@@ -9,14 +9,23 @@
 // Additionally, you should also exclude this file from your linter and/or formatter to prevent it from being checked or modified.
 
 import { Route as rootRouteImport } from './routes/__root'
+import { Route as McpRouteImport } from './routes/mcp'
 import { Route as AdminRouteImport } from './routes/admin'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as CommanderAppIdRouteImport } from './routes/commander.$appId'
 import { Route as CommandeOrderIdRouteImport } from './routes/commande.$orderId'
 import { Route as AdminDiagnosticRouteImport } from './routes/admin.diagnostic'
+import { Route as Char91DotwellKnownChar93OauthProtectedResourceRouteImport } from './routes/[.well-known]/oauth-protected-resource'
+import { Route as Char91DotmcpChar93ListToolsRouteImport } from './routes/[.mcp]/list-tools'
 import { Route as CommandeSuccesOrderIdRouteImport } from './routes/commande.succes.$orderId'
+import { Route as Char91DotmcpChar93InvokeToolToolRouteImport } from './routes/[.mcp]/invoke-tool/$tool'
 import { Route as ApiPublicWebhooksNotchpayRouteImport } from './routes/api/public/webhooks/notchpay'
 
+const McpRoute = McpRouteImport.update({
+  id: '/mcp',
+  path: '/mcp',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const AdminRoute = AdminRouteImport.update({
   id: '/admin',
   path: '/admin',
@@ -42,11 +51,29 @@ const AdminDiagnosticRoute = AdminDiagnosticRouteImport.update({
   path: '/diagnostic',
   getParentRoute: () => AdminRoute,
 } as any)
+const Char91DotwellKnownChar93OauthProtectedResourceRoute =
+  Char91DotwellKnownChar93OauthProtectedResourceRouteImport.update({
+    id: '/.well-known/oauth-protected-resource',
+    path: '/.well-known/oauth-protected-resource',
+    getParentRoute: () => rootRouteImport,
+  } as any)
+const Char91DotmcpChar93ListToolsRoute =
+  Char91DotmcpChar93ListToolsRouteImport.update({
+    id: '/.mcp/list-tools',
+    path: '/.mcp/list-tools',
+    getParentRoute: () => rootRouteImport,
+  } as any)
 const CommandeSuccesOrderIdRoute = CommandeSuccesOrderIdRouteImport.update({
   id: '/commande/succes/$orderId',
   path: '/commande/succes/$orderId',
   getParentRoute: () => rootRouteImport,
 } as any)
+const Char91DotmcpChar93InvokeToolToolRoute =
+  Char91DotmcpChar93InvokeToolToolRouteImport.update({
+    id: '/.mcp/invoke-tool/$tool',
+    path: '/.mcp/invoke-tool/$tool',
+    getParentRoute: () => rootRouteImport,
+  } as any)
 const ApiPublicWebhooksNotchpayRoute =
   ApiPublicWebhooksNotchpayRouteImport.update({
     id: '/api/public/webhooks/notchpay',
@@ -57,18 +84,26 @@ const ApiPublicWebhooksNotchpayRoute =
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/admin': typeof AdminRouteWithChildren
+  '/mcp': typeof McpRoute
+  '/.mcp/list-tools': typeof Char91DotmcpChar93ListToolsRoute
+  '/.well-known/oauth-protected-resource': typeof Char91DotwellKnownChar93OauthProtectedResourceRoute
   '/admin/diagnostic': typeof AdminDiagnosticRoute
   '/commande/$orderId': typeof CommandeOrderIdRoute
   '/commander/$appId': typeof CommanderAppIdRoute
+  '/.mcp/invoke-tool/$tool': typeof Char91DotmcpChar93InvokeToolToolRoute
   '/commande/succes/$orderId': typeof CommandeSuccesOrderIdRoute
   '/api/public/webhooks/notchpay': typeof ApiPublicWebhooksNotchpayRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/admin': typeof AdminRouteWithChildren
+  '/mcp': typeof McpRoute
+  '/.mcp/list-tools': typeof Char91DotmcpChar93ListToolsRoute
+  '/.well-known/oauth-protected-resource': typeof Char91DotwellKnownChar93OauthProtectedResourceRoute
   '/admin/diagnostic': typeof AdminDiagnosticRoute
   '/commande/$orderId': typeof CommandeOrderIdRoute
   '/commander/$appId': typeof CommanderAppIdRoute
+  '/.mcp/invoke-tool/$tool': typeof Char91DotmcpChar93InvokeToolToolRoute
   '/commande/succes/$orderId': typeof CommandeSuccesOrderIdRoute
   '/api/public/webhooks/notchpay': typeof ApiPublicWebhooksNotchpayRoute
 }
@@ -76,9 +111,13 @@ export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
   '/admin': typeof AdminRouteWithChildren
+  '/mcp': typeof McpRoute
+  '/.mcp/list-tools': typeof Char91DotmcpChar93ListToolsRoute
+  '/.well-known/oauth-protected-resource': typeof Char91DotwellKnownChar93OauthProtectedResourceRoute
   '/admin/diagnostic': typeof AdminDiagnosticRoute
   '/commande/$orderId': typeof CommandeOrderIdRoute
   '/commander/$appId': typeof CommanderAppIdRoute
+  '/.mcp/invoke-tool/$tool': typeof Char91DotmcpChar93InvokeToolToolRoute
   '/commande/succes/$orderId': typeof CommandeSuccesOrderIdRoute
   '/api/public/webhooks/notchpay': typeof ApiPublicWebhooksNotchpayRoute
 }
@@ -87,27 +126,39 @@ export interface FileRouteTypes {
   fullPaths:
     | '/'
     | '/admin'
+    | '/mcp'
+    | '/.mcp/list-tools'
+    | '/.well-known/oauth-protected-resource'
     | '/admin/diagnostic'
     | '/commande/$orderId'
     | '/commander/$appId'
+    | '/.mcp/invoke-tool/$tool'
     | '/commande/succes/$orderId'
     | '/api/public/webhooks/notchpay'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
     | '/admin'
+    | '/mcp'
+    | '/.mcp/list-tools'
+    | '/.well-known/oauth-protected-resource'
     | '/admin/diagnostic'
     | '/commande/$orderId'
     | '/commander/$appId'
+    | '/.mcp/invoke-tool/$tool'
     | '/commande/succes/$orderId'
     | '/api/public/webhooks/notchpay'
   id:
     | '__root__'
     | '/'
     | '/admin'
+    | '/mcp'
+    | '/.mcp/list-tools'
+    | '/.well-known/oauth-protected-resource'
     | '/admin/diagnostic'
     | '/commande/$orderId'
     | '/commander/$appId'
+    | '/.mcp/invoke-tool/$tool'
     | '/commande/succes/$orderId'
     | '/api/public/webhooks/notchpay'
   fileRoutesById: FileRoutesById
@@ -115,14 +166,25 @@ export interface FileRouteTypes {
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
   AdminRoute: typeof AdminRouteWithChildren
+  McpRoute: typeof McpRoute
+  Char91DotmcpChar93ListToolsRoute: typeof Char91DotmcpChar93ListToolsRoute
+  Char91DotwellKnownChar93OauthProtectedResourceRoute: typeof Char91DotwellKnownChar93OauthProtectedResourceRoute
   CommandeOrderIdRoute: typeof CommandeOrderIdRoute
   CommanderAppIdRoute: typeof CommanderAppIdRoute
+  Char91DotmcpChar93InvokeToolToolRoute: typeof Char91DotmcpChar93InvokeToolToolRoute
   CommandeSuccesOrderIdRoute: typeof CommandeSuccesOrderIdRoute
   ApiPublicWebhooksNotchpayRoute: typeof ApiPublicWebhooksNotchpayRoute
 }
 
 declare module '@tanstack/react-router' {
   interface FileRoutesByPath {
+    '/mcp': {
+      id: '/mcp'
+      path: '/mcp'
+      fullPath: '/mcp'
+      preLoaderRoute: typeof McpRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/admin': {
       id: '/admin'
       path: '/admin'
@@ -158,11 +220,32 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AdminDiagnosticRouteImport
       parentRoute: typeof AdminRoute
     }
+    '/.well-known/oauth-protected-resource': {
+      id: '/.well-known/oauth-protected-resource'
+      path: '/.well-known/oauth-protected-resource'
+      fullPath: '/.well-known/oauth-protected-resource'
+      preLoaderRoute: typeof Char91DotwellKnownChar93OauthProtectedResourceRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/.mcp/list-tools': {
+      id: '/.mcp/list-tools'
+      path: '/.mcp/list-tools'
+      fullPath: '/.mcp/list-tools'
+      preLoaderRoute: typeof Char91DotmcpChar93ListToolsRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/commande/succes/$orderId': {
       id: '/commande/succes/$orderId'
       path: '/commande/succes/$orderId'
       fullPath: '/commande/succes/$orderId'
       preLoaderRoute: typeof CommandeSuccesOrderIdRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/.mcp/invoke-tool/$tool': {
+      id: '/.mcp/invoke-tool/$tool'
+      path: '/.mcp/invoke-tool/$tool'
+      fullPath: '/.mcp/invoke-tool/$tool'
+      preLoaderRoute: typeof Char91DotmcpChar93InvokeToolToolRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/api/public/webhooks/notchpay': {
@@ -188,8 +271,13 @@ const AdminRouteWithChildren = AdminRoute._addFileChildren(AdminRouteChildren)
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   AdminRoute: AdminRouteWithChildren,
+  McpRoute: McpRoute,
+  Char91DotmcpChar93ListToolsRoute: Char91DotmcpChar93ListToolsRoute,
+  Char91DotwellKnownChar93OauthProtectedResourceRoute:
+    Char91DotwellKnownChar93OauthProtectedResourceRoute,
   CommandeOrderIdRoute: CommandeOrderIdRoute,
   CommanderAppIdRoute: CommanderAppIdRoute,
+  Char91DotmcpChar93InvokeToolToolRoute: Char91DotmcpChar93InvokeToolToolRoute,
   CommandeSuccesOrderIdRoute: CommandeSuccesOrderIdRoute,
   ApiPublicWebhooksNotchpayRoute: ApiPublicWebhooksNotchpayRoute,
 }
