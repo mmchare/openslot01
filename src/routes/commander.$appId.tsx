@@ -58,8 +58,12 @@ function OrderPage() {
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
   const [phone, setPhone] = useState("+237");
+  const [channel, setChannel] = useState<Channel | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+
+  const detected = useMemo(() => detectChannel(phone), [phone]);
+  const effectiveChannel: Channel | null = channel ?? detected;
 
   if (!fresh) {
     return (
@@ -95,6 +99,10 @@ function OrderPage() {
       setError("Numéro WhatsApp invalide. Format attendu : +237 6xx xxx xxx");
       return;
     }
+    if (!effectiveChannel) {
+      setError("Choisis ton opérateur Mobile Money (MTN ou Orange).");
+      return;
+    }
 
     setLoading(true);
     try {
@@ -104,25 +112,26 @@ function OrderPage() {
           client_name: trimmedName,
           client_email: trimmedEmail,
           client_whatsapp: cleanedPhone,
+          channel: effectiveChannel,
           origin: window.location.origin,
         },
       });
-      if (res.dev_mode) {
-        // Pas de clé Notch Pay → redirection directe (paiement simulé sur la page de succès)
-        navigate({
-          to: "/commande/succes/$orderId",
-          params: { orderId: res.order_id },
-          search: { dev: 1 },
-        });
-      } else {
-        // Redirection vers la page hébergée Notch Pay (MoMo / Orange Money)
-        window.location.href = res.authorization_url;
-      }
+      // Le prompt USSD est déjà parti sur le téléphone du client.
+      // On l'amène sur la page d'attente qui poll le statut.
+      navigate({
+        to: "/commande/succes/$orderId",
+        params: { orderId: res.order_id },
+        search: {
+          confirm: 1,
+          instruction: res.instruction,
+        },
+      });
     } catch (err) {
       setError(err instanceof Error ? err.message : "Une erreur est survenue.");
       setLoading(false);
     }
   };
+
 
   return (
     <div className="min-h-screen">
