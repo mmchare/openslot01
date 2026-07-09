@@ -77,11 +77,15 @@ function SuccessPage() {
             Ta commande n'a pas pu être finalisée. Aucun montant n'a été débité.
           </p>
           <Link
-            to="/"
+            to="/commander/$appId"
+            params={{ appId: data.application_id }}
             className="mt-6 inline-block rounded-full bg-gradient-primary px-5 py-3 text-sm font-semibold text-primary-foreground shadow-glow"
           >
-            Retour au catalogue
+            Réessayer le paiement
           </Link>
+          <p className="mx-auto mt-4 max-w-sm text-xs text-muted-foreground">
+            Si ton opérateur indique qu'aucune transaction n'est en cours, vérifie que le bouton choisi correspond bien à ta SIM Mobile Money.
+          </p>
           <SupportRef orderId={orderId} />
         </div>
       </div>

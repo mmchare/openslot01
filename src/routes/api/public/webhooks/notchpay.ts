@@ -1,6 +1,10 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { supabaseAdmin } from "@/integrations/supabase/client.server";
 import { verifyNotchPaySignature } from "@/lib/notchpay.server";
+import {
+  isNotchPaymentFailed,
+  isNotchPaymentSuccessful,
+} from "@/lib/notchpay.server";
 import { logPaymentEvent } from "@/lib/payment-events.server";
 import {
   sendTelegramAlert,
@@ -19,7 +23,9 @@ export const Route = createFileRoute("/api/public/webhooks/notchpay")({
         const rawBody = await request.text();
         const signature =
           request.headers.get("x-notch-signature") ??
-          request.headers.get("notch-signature");
+          request.headers.get("notch-signature") ??
+          request.headers.get("x-notchpay-signature") ??
+          request.headers.get("notchpay-signature");
 
         // Sécurité: signature obligatoire si NOTCHPAY_HASH est configuré.
         if (process.env.NOTCHPAY_HASH) {
@@ -36,8 +42,23 @@ export const Route = createFileRoute("/api/public/webhooks/notchpay")({
 
         let payload: {
           event?: string;
+          type?: string;
+          reference?: string;
+          trxref?: string;
+          status?: string;
           data?: {
             reference?: string;
+            trxref?: string;
+            status?: string;
+          };
+          transaction?: {
+            reference?: string;
+            trxref?: string;
+            status?: string;
+          };
+          payment?: {
+            reference?: string;
+            trxref?: string;
             status?: string;
           };
         };
@@ -53,17 +74,20 @@ export const Route = createFileRoute("/api/public/webhooks/notchpay")({
           return new Response("Invalid JSON", { status: 400 });
         }
 
-        const reference = payload.data?.reference;
-        const status = payload.data?.status;
+        const tx = payload.data ?? payload.transaction ?? payload.payment ?? payload;
+        const reference = tx.reference;
+        const trxref = tx.trxref;
+        const status = tx.status?.toLowerCase();
 
         await logPaymentEvent({
           notchpay_reference: reference ?? null,
           event_type: "webhook_received",
-          message: `event=${payload.event ?? "?"} status=${status ?? "?"}`,
+          message: `event=${payload.event ?? payload.type ?? "?"} status=${status ?? "?"}`,
           metadata: {
-            event: payload.event,
+            event: payload.event ?? payload.type,
             status,
             reference,
+            trxref,
           },
         });
 
@@ -72,11 +96,21 @@ export const Route = createFileRoute("/api/public/webhooks/notchpay")({
         }
 
         // Récupère la commande liée
-        const { data: order } = await supabaseAdmin
+        let orderQuery = supabaseAdmin
           .from("orders")
           .select("id, status, application_id")
-          .eq("notchpay_reference", reference)
-          .maybeSingle();
+          .eq("notchpay_reference", reference);
+
+        let { data: order } = await orderQuery.maybeSingle();
+
+        if (!order && trxref && /^[0-9a-f-]{36}$/i.test(trxref)) {
+          const { data: byTrxref } = await supabaseAdmin
+            .from("orders")
+            .select("id, status, application_id")
+            .eq("id", trxref)
+            .maybeSingle();
+          order = byTrxref;
+        }
 
         if (!order) {
           await logPaymentEvent({
@@ -92,7 +126,7 @@ export const Route = createFileRoute("/api/public/webhooks/notchpay")({
           return new Response("ok", { status: 200 });
         }
 
-        if (status === "complete" || status === "accepted") {
+        if (isNotchPaymentSuccessful(status)) {
           // Attribution atomique du slot
           const { error: allocErr } = await supabaseAdmin.rpc(
             "allocate_slot_for_order",
@@ -133,7 +167,7 @@ export const Route = createFileRoute("/api/public/webhooks/notchpay")({
               buildStockAlertMessage(app?.name ?? "Produit"),
             );
           }
-        } else if (status === "failed" || status === "canceled") {
+        } else if (isNotchPaymentFailed(status)) {
           await supabaseAdmin
             .from("orders")
             .update({ status: "echoue" })

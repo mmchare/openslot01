@@ -21,6 +21,9 @@ export type PaymentEventType =
   | "dev_simulate_error"
   | "notchpay_direct_charge_success"
   | "notchpay_direct_charge_error"
+  | "notchpay_status_check_success"
+  | "notchpay_status_check_error"
+  | "notchpay_order_synced"
   | "success_page_view";
 
 export type PaymentEventLevel = "info" | "warn" | "error";

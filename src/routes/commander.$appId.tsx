@@ -63,7 +63,6 @@ function OrderPage() {
   const [error, setError] = useState<string | null>(null);
 
   const detected = useMemo(() => detectChannel(phone), [phone]);
-  const effectiveChannel: Channel | null = channel ?? detected;
 
   if (!fresh) {
     return (
@@ -99,8 +98,8 @@ function OrderPage() {
       setError("Numéro WhatsApp invalide. Format attendu : +237 6xx xxx xxx");
       return;
     }
-    if (!effectiveChannel) {
-      setError("Choisis ton opérateur Mobile Money (MTN ou Orange).");
+    if (!channel) {
+      setError("Choisis explicitement ton opérateur Mobile Money (MTN ou Orange).");
       return;
     }
 
@@ -112,7 +111,7 @@ function OrderPage() {
           client_name: trimmedName,
           client_email: trimmedEmail,
           client_whatsapp: cleanedPhone,
-          channel: effectiveChannel,
+          channel,
           origin: window.location.origin,
         },
       });
@@ -214,7 +213,7 @@ function OrderPage() {
                       { id: "cm.orange" as const, label: "Orange Money", color: "#FF6600" },
                     ]
                   ).map((op) => {
-                    const active = effectiveChannel === op.id;
+                    const active = channel === op.id;
                     const isDetected = detected === op.id && channel === null;
                     return (
                       <button
@@ -241,6 +240,16 @@ function OrderPage() {
                     );
                   })}
                 </div>
+                {detected && !channel && (
+                  <p className="mt-2 text-xs text-muted-foreground">
+                    Suggestion d'après le préfixe : {detected === "cm.mtn" ? "MTN MoMo" : "Orange Money"}. Confirme manuellement avant de payer.
+                  </p>
+                )}
+                {detected && channel && detected !== channel && (
+                  <p className="mt-2 rounded-lg border border-amber-400/30 bg-amber-400/10 px-3 py-2 text-xs text-amber-200">
+                    Le préfixe ressemble à {detected === "cm.mtn" ? "MTN" : "Orange"}. Continue seulement si ce numéro est bien sur {channel === "cm.mtn" ? "MTN" : "Orange"}.
+                  </p>
+                )}
               </div>
             </div>
 
