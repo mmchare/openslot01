@@ -1,9 +1,9 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { supabaseAdmin } from "@/integrations/supabase/client.server";
-import { verifyNotchPaySignature } from "@/lib/notchpay.server";
 import {
   isNotchPaymentFailed,
   isNotchPaymentSuccessful,
+  verifyNotchPaySignature,
 } from "@/lib/notchpay.server";
 import { logPaymentEvent } from "@/lib/payment-events.server";
 import {
@@ -126,7 +126,7 @@ export const Route = createFileRoute("/api/public/webhooks/notchpay")({
           return new Response("ok", { status: 200 });
         }
 
-        if (isNotchPaymentSuccessful(status)) {
+        if (status && isNotchPaymentSuccessful(status)) {
           // Attribution atomique du slot
           const { error: allocErr } = await supabaseAdmin.rpc(
             "allocate_slot_for_order",
@@ -167,7 +167,7 @@ export const Route = createFileRoute("/api/public/webhooks/notchpay")({
               buildStockAlertMessage(app?.name ?? "Produit"),
             );
           }
-        } else if (isNotchPaymentFailed(status)) {
+        } else if (status && isNotchPaymentFailed(status)) {
           await supabaseAdmin
             .from("orders")
             .update({ status: "echoue" })
