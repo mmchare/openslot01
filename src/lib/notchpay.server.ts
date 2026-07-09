@@ -156,6 +156,39 @@ export interface DirectChargeResult {
   raw: unknown;
 }
 
+export interface NotchPayStatusResult {
+  reference: string;
+  trxref: string | null;
+  status: string;
+  amount: number | null;
+  currency: string | null;
+  raw: unknown;
+}
+
+function readTransactionStatus(json: {
+  status?: string;
+  payment?: { status?: string; reference?: string; trxref?: string; amount?: number; currency?: string };
+  transaction?:
+    | string
+    | { status?: string; reference?: string; trxref?: string; amount?: number; currency?: string };
+}): string {
+  if (typeof json.transaction === "object" && json.transaction?.status) {
+    return json.transaction.status;
+  }
+  if (json.payment?.status) return json.payment.status;
+  return json.status ?? "processing";
+}
+
+function readTransactionObject(json: {
+  payment?: { status?: string; reference?: string; trxref?: string; amount?: number; currency?: string };
+  transaction?:
+    | string
+    | { status?: string; reference?: string; trxref?: string; amount?: number; currency?: string };
+}) {
+  if (typeof json.transaction === "object" && json.transaction) return json.transaction;
+  return json.payment ?? null;
+}
+
 // Déclenche le prompt USSD sur le téléphone du client.
 export async function directChargeMobileMoney(
   input: DirectChargeInput,
@@ -176,7 +209,11 @@ export async function directChargeMobileMoney(
       },
       body: JSON.stringify({
         channel: input.channel,
-        data: { phone },
+        data: {
+          phone,
+          account_number: phone,
+          country: "CM",
+        },
       }),
     },
   );
@@ -185,7 +222,8 @@ export async function directChargeMobileMoney(
   let json: {
     status?: string;
     message?: string;
-    transaction?: { status?: string };
+    payment?: { status?: string };
+    transaction?: string | { status?: string };
   } = {};
   try {
     json = JSON.parse(bodyText);
@@ -218,15 +256,116 @@ export async function directChargeMobileMoney(
     event_type: "notchpay_direct_charge_success",
     metadata: {
       channel: input.channel,
-      status: json.transaction?.status ?? json.status,
+      status: readTransactionStatus(json),
+      response_message: json.message ?? null,
     },
   });
 
   return {
-    status: json.transaction?.status ?? json.status ?? "processing",
+    status: readTransactionStatus(json),
     message: json.message ?? "Prompt envoyé sur le téléphone.",
     raw: json,
   };
+}
+
+export async function getNotchPaymentStatus(
+  reference: string,
+  orderId?: string,
+): Promise<NotchPayStatusResult> {
+  const key = process.env.NOTCHPAY_PUBLIC_KEY;
+  if (!key) throw new Error("NOTCHPAY_PUBLIC_KEY manquant.");
+
+  const res = await fetch(
+    `${NOTCHPAY_BASE}/payments/${encodeURIComponent(reference)}`,
+    {
+      method: "GET",
+      headers: {
+        Authorization: key,
+        Accept: "application/json",
+      },
+    },
+  );
+
+  const bodyText = await res.text();
+  let json: {
+    status?: string;
+    message?: string;
+    payment?: {
+      status?: string;
+      reference?: string;
+      trxref?: string;
+      amount?: number;
+      currency?: string;
+    };
+    transaction?:
+      | string
+      | {
+          status?: string;
+          reference?: string;
+          trxref?: string;
+          amount?: number;
+          currency?: string;
+        };
+  } = {};
+  try {
+    json = JSON.parse(bodyText);
+  } catch {
+    // keep bodyText for diagnostics
+  }
+
+  if (!res.ok) {
+    await logPaymentEvent({
+      order_id: orderId ?? null,
+      notchpay_reference: reference,
+      event_type: "notchpay_status_check_error",
+      level: "error",
+      message: `Notch Pay status failed (${res.status})`,
+      metadata: { status: res.status, body: bodyText.slice(0, 1000) },
+    });
+    throw new Error(json.message || `Vérification Notch Pay impossible (${res.status}).`);
+  }
+
+  const tx = readTransactionObject(json);
+  const status = readTransactionStatus(json).toLowerCase();
+
+  await logPaymentEvent({
+    order_id: orderId ?? null,
+    notchpay_reference: reference,
+    event_type: "notchpay_status_check_success",
+    metadata: {
+      status,
+      trxref: tx?.trxref ?? null,
+      amount: tx?.amount ?? null,
+      currency: tx?.currency ?? null,
+    },
+  });
+
+  return {
+    reference: tx?.reference ?? reference,
+    trxref: tx?.trxref ?? null,
+    status,
+    amount: tx?.amount ?? null,
+    currency: tx?.currency ?? null,
+    raw: json,
+  };
+}
+
+export function isNotchPaymentSuccessful(status: string): boolean {
+  return ["complete", "completed", "success", "successful", "paid"].includes(
+    status.toLowerCase(),
+  );
+}
+
+export function isNotchPaymentFailed(status: string): boolean {
+  return [
+    "failed",
+    "fail",
+    "canceled",
+    "cancelled",
+    "expired",
+    "declined",
+    "rejected",
+  ].includes(status.toLowerCase());
 }
 
 export function verifyNotchPaySignature(
@@ -237,7 +376,8 @@ export function verifyNotchPaySignature(
   if (!secret || !signature) return false;
   try {
     const expected = createHmac("sha256", secret).update(rawBody).digest("hex");
-    const a = Buffer.from(signature);
+    const normalized = signature.trim().replace(/^sha256=/i, "");
+    const a = Buffer.from(normalized, "hex");
     const b = Buffer.from(expected);
     if (a.length !== b.length) return false;
     return timingSafeEqual(a, b);

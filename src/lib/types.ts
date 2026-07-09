@@ -15,6 +15,7 @@ export interface CatalogItem {
 
 export interface OrderSuccessPayload {
   order_id: string;
+  application_id: string;
   status: "en_attente" | "paye" | "echoue";
   client_name: string;
   client_whatsapp: string;
