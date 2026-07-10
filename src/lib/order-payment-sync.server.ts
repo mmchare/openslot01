@@ -1,6 +1,7 @@
 import { supabaseAdmin } from "@/integrations/supabase/client.server";
 import { logPaymentEvent } from "./payment-events.server";
 import {
+  detectCameroonChannel,
   getNotchPaymentStatus,
   isNotchPaymentFailed,
   isNotchPaymentSuccessful,
@@ -42,6 +43,36 @@ export async function syncOrderWithNotchPay(input: SyncOrderInput): Promise<void
   }
 
   if (isNotchPaymentFailed(remote.status)) {
+    const { data: orderTiming } = await supabaseAdmin
+      .from("orders")
+      .select("created_at, client_whatsapp")
+      .eq("id", input.orderId)
+      .maybeSingle();
+
+    const createdAt = orderTiming?.created_at
+      ? new Date(orderTiming.created_at).getTime()
+      : Date.now();
+    const ageMs = Date.now() - createdAt;
+    const isMtn = detectCameroonChannel(orderTiming?.client_whatsapp ?? "") === "cm.mtn";
+
+    // MTN renvoie parfois "failed" quelques secondes après le Direct Charge,
+    // alors que NotchPay demande encore une validation manuelle via *126#.
+    // On garde donc la commande en attente le temps que le client confirme.
+    if (isMtn && ageMs < 5 * 60 * 1000) {
+      await logPaymentEvent({
+        order_id: input.orderId,
+        notchpay_reference: input.notchpayReference,
+        event_type: "notchpay_failed_deferred",
+        level: "warn",
+        metadata: {
+          source: "status_poll",
+          notchpay_status: remote.status,
+          grace_seconds_remaining: Math.ceil((5 * 60 * 1000 - ageMs) / 1000),
+        },
+      });
+      return;
+    }
+
     await supabaseAdmin
       .from("orders")
       .update({ status: "echoue" })
