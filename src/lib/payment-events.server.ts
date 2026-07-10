@@ -23,6 +23,7 @@ export type PaymentEventType =
   | "notchpay_direct_charge_error"
   | "notchpay_status_check_success"
   | "notchpay_status_check_error"
+  | "notchpay_failed_deferred"
   | "notchpay_order_synced"
   | "success_page_view";
 
