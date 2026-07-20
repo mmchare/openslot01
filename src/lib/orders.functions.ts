@@ -125,7 +125,7 @@ export const createOrder = createServerFn({ method: "POST" })
     const instruction =
       data.channel === "cm.orange"
         ? "Attends le prompt Orange Money sur ton téléphone, puis entre ton PIN pour confirmer. Si rien n'apparaît sous 30s, compose #150*50# pour valider la transaction en attente."
-        : "Un prompt MTN Mobile Money va s'afficher sur ton téléphone (10–30s). Entre ton PIN pour confirmer. Si le prompt ne s'affiche pas, compose *126# → Approve payment (ou *126*1*7#) pour valider la transaction en attente.";
+        : "Pour MTN, compose *126# tout de suite, choisis Approve payment / Valider paiement, puis entre ton PIN. Si un prompt MTN s'affiche automatiquement, tu peux aussi le valider directement.";
 
     return {
       order_id: order.id,
