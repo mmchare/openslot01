@@ -198,40 +198,70 @@ export async function directChargeMobileMoney(
 
   const phone = normalizeCameroonPhone(input.phone);
 
-  const res = await fetch(
-    `${NOTCHPAY_BASE}/payments/${encodeURIComponent(input.reference)}`,
+  const attempts = [
     {
-      method: "POST",
-      headers: {
-        Authorization: key,
-        "Content-Type": "application/json",
-        Accept: "application/json",
-      },
-      body: JSON.stringify({
-        channel: input.channel,
-        data: {
-          phone,
-          account_number: phone,
-          country: "CM",
-        },
-      }),
+      variant: "phone",
+      body: { channel: input.channel, data: { phone } },
     },
-  );
+    {
+      variant: "account_number",
+      body: { channel: input.channel, data: { account_number: phone } },
+    },
+  ];
 
-  const bodyText = await res.text();
-  let json: {
-    status?: string;
-    message?: string;
-    payment?: { status?: string };
-    transaction?: string | { status?: string };
-  } = {};
-  try {
-    json = JSON.parse(bodyText);
-  } catch {
-    // keep bodyText for logging
-  }
+  let lastErrorMessage = `Impossible de déclencher le paiement. Vérifie ton numéro ${input.channel === "cm.mtn" ? "MTN" : "Orange"}.`;
 
-  if (!res.ok) {
+  for (const [index, attempt] of attempts.entries()) {
+    const res = await fetch(
+      `${NOTCHPAY_BASE}/payments/${encodeURIComponent(input.reference)}`,
+      {
+        method: "POST",
+        headers: {
+          Authorization: key,
+          "Content-Type": "application/json",
+          Accept: "application/json",
+        },
+        body: JSON.stringify(attempt.body),
+      },
+    );
+
+    const bodyText = await res.text();
+    let json: {
+      status?: string;
+      message?: string;
+      payment?: { status?: string };
+      transaction?: string | { status?: string };
+    } = {};
+    try {
+      json = JSON.parse(bodyText);
+    } catch {
+      // keep bodyText for logging
+    }
+
+    if (res.ok) {
+      await logPaymentEvent({
+        order_id: input.orderId,
+        notchpay_reference: input.reference,
+        event_type: "notchpay_direct_charge_success",
+        metadata: {
+          channel: input.channel,
+          payload_variant: attempt.variant,
+          status: readTransactionStatus(json),
+          response_message: json.message ?? null,
+        },
+      });
+
+      return {
+        status: readTransactionStatus(json),
+        message: json.message ?? "Prompt envoyé sur le téléphone.",
+        raw: json,
+      };
+    }
+
+    lastErrorMessage =
+      json.message ||
+      `Impossible de déclencher le paiement (${res.status}). Vérifie ton numéro ${input.channel === "cm.mtn" ? "MTN" : "Orange"}.`;
+
     await logPaymentEvent({
       order_id: input.orderId,
       notchpay_reference: input.reference,
@@ -242,30 +272,15 @@ export async function directChargeMobileMoney(
         status: res.status,
         body: bodyText.slice(0, 1000),
         channel: input.channel,
+        payload_variant: attempt.variant,
+        will_retry: res.status >= 500 && index < attempts.length - 1,
       },
     });
-    throw new Error(
-      json.message ||
-        `Impossible de déclencher le paiement (${res.status}). Vérifie ton numéro ${input.channel === "cm.mtn" ? "MTN" : "Orange"}.`,
-    );
+
+    if (res.status < 500) break;
   }
 
-  await logPaymentEvent({
-    order_id: input.orderId,
-    notchpay_reference: input.reference,
-    event_type: "notchpay_direct_charge_success",
-    metadata: {
-      channel: input.channel,
-      status: readTransactionStatus(json),
-      response_message: json.message ?? null,
-    },
-  });
-
-  return {
-    status: readTransactionStatus(json),
-    message: json.message ?? "Prompt envoyé sur le téléphone.",
-    raw: json,
-  };
+  throw new Error(lastErrorMessage);
 }
 
 export async function getNotchPaymentStatus(
