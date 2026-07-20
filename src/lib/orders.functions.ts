@@ -8,7 +8,10 @@ import {
   type MobileMoneyChannel,
 } from "./notchpay.server";
 import { logPaymentEvent } from "./payment-events.server";
-import { syncOrderWithNotchPay } from "./order-payment-sync.server";
+import {
+  recoverRecentMtnProcessingOrder,
+  syncOrderWithNotchPay,
+} from "./order-payment-sync.server";
 import type { OrderSuccessPayload } from "./types";
 
 const CreateOrderInput = z.object({
@@ -122,7 +125,7 @@ export const createOrder = createServerFn({ method: "POST" })
     const instruction =
       data.channel === "cm.orange"
         ? "Attends le prompt Orange Money sur ton téléphone, puis entre ton PIN pour confirmer. Si rien n'apparaît sous 30s, compose #150*50# pour valider la transaction en attente."
-        : "Un prompt MTN Mobile Money va s'afficher sur ton téléphone (10–30s). Entre ton PIN pour confirmer. Si le prompt ne s'affiche pas, compose *126# → Approve payment (ou *126*1*7#) pour valider la transaction en attente.";
+        : "Pour MTN, compose *126# tout de suite, choisis Approve payment / Valider paiement, puis entre ton PIN. Si un prompt MTN s'affiche automatiquement, tu peux aussi le valider directement.";
 
     return {
       order_id: order.id,
@@ -138,12 +141,32 @@ export const getOrderForSuccess = createServerFn({ method: "GET" })
     const { data: order } = await supabaseAdmin
       .from("orders")
       .select(
-        "id, status, client_name, client_whatsapp, amount_paid, slot_id, application_id, notchpay_reference, subscription_start_at, subscription_end_at, applications(name, product_type, apk_version, apk_size_bytes)",
+        "id, status, created_at, client_name, client_whatsapp, amount_paid, slot_id, application_id, notchpay_reference, subscription_start_at, subscription_end_at, applications(name, product_type, apk_version, apk_size_bytes)",
       )
       .eq("id", data.order_id)
       .maybeSingle();
 
     if (!order) return null;
+
+    if (order.status === "echoue") {
+      try {
+        const recovered = await recoverRecentMtnProcessingOrder({
+          orderId: order.id,
+          currentStatus: order.status,
+          createdAt: order.created_at,
+          phone: order.client_whatsapp,
+        });
+        if (recovered) order.status = "en_attente";
+      } catch (err) {
+        await logPaymentEvent({
+          order_id: order.id,
+          notchpay_reference: order.notchpay_reference,
+          event_type: "notchpay_status_check_error",
+          level: "error",
+          message: err instanceof Error ? err.message : "MTN recovery failed",
+        });
+      }
+    }
 
     if (order.status === "en_attente" && order.notchpay_reference) {
       try {
@@ -155,7 +178,7 @@ export const getOrderForSuccess = createServerFn({ method: "GET" })
         const { data: refreshed } = await supabaseAdmin
           .from("orders")
           .select(
-            "id, status, client_name, client_whatsapp, amount_paid, slot_id, application_id, notchpay_reference, subscription_start_at, subscription_end_at, applications(name, product_type, apk_version, apk_size_bytes)",
+            "id, status, created_at, client_name, client_whatsapp, amount_paid, slot_id, application_id, notchpay_reference, subscription_start_at, subscription_end_at, applications(name, product_type, apk_version, apk_size_bytes)",
           )
           .eq("id", data.order_id)
           .maybeSingle();

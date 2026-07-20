@@ -1,11 +1,11 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { supabaseAdmin } from "@/integrations/supabase/client.server";
 import {
-  detectCameroonChannel,
   isNotchPaymentFailed,
   isNotchPaymentSuccessful,
   verifyNotchPaySignature,
 } from "@/lib/notchpay.server";
+import { getMtnManualApprovalState } from "@/lib/order-payment-sync.server";
 import { logPaymentEvent } from "@/lib/payment-events.server";
 import {
   sendTelegramAlert,
@@ -169,16 +169,14 @@ export const Route = createFileRoute("/api/public/webhooks/notchpay")({
             );
           }
         } else if (status && isNotchPaymentFailed(status)) {
-          const createdAt = order.created_at
-            ? new Date(order.created_at).getTime()
-            : Date.now();
-          const ageMs = Date.now() - createdAt;
-          const isMtn = detectCameroonChannel(order.client_whatsapp ?? "") === "cm.mtn";
-
           // MTN peut envoyer un statut d'échec très vite alors que la validation
           // manuelle *126# est encore possible. Ne clôture pas la commande avant
           // la fin de cette fenêtre de validation.
-          if (isMtn && ageMs < 5 * 60 * 1000) {
+          const grace = getMtnManualApprovalState(
+            order.created_at,
+            order.client_whatsapp,
+          );
+          if (grace.shouldDefer) {
             await logPaymentEvent({
               order_id: order.id,
               notchpay_reference: reference,
@@ -187,7 +185,7 @@ export const Route = createFileRoute("/api/public/webhooks/notchpay")({
               message: `status=${status}`,
               metadata: {
                 source: "webhook",
-                grace_seconds_remaining: Math.ceil((5 * 60 * 1000 - ageMs) / 1000),
+                grace_seconds_remaining: grace.remainingSeconds,
               },
             });
             return new Response("ok", { status: 200 });
