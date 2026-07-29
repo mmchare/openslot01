@@ -115,6 +115,12 @@ function OrderPage() {
           origin: window.location.origin,
         },
       });
+
+      if (res.checkout_url) {
+        window.location.assign(res.checkout_url);
+        return;
+      }
+
       // Le prompt USSD est déjà parti sur le téléphone du client.
       // On l'amène sur la page d'attente qui poll le statut.
       navigate({

@@ -113,25 +113,54 @@ export const createOrder = createServerFn({ method: "POST" })
       .update({ notchpay_reference: pay.reference })
       .eq("id", order.id);
 
-    // Direct Charge — déclenche immédiatement le prompt USSD sur le téléphone.
-    // C'est ce qui fait apparaître la transaction en attente sur MTN MoMo / Orange Money.
-    const charge = await directChargeMobileMoney({
-      reference: pay.reference,
-      channel: data.channel as MobileMoneyChannel,
-      phone: data.client_whatsapp,
-      orderId: order.id,
-    });
-
     const instruction =
       data.channel === "cm.orange"
         ? "Attends le prompt Orange Money sur ton téléphone, puis entre ton PIN pour confirmer. Si rien n'apparaît sous 30s, compose #150*50# pour valider la transaction en attente."
         : "Pour MTN, compose *126# tout de suite, choisis Approve payment / Valider paiement, puis entre ton PIN. Si un prompt MTN s'affiche automatiquement, tu peux aussi le valider directement.";
 
-    return {
-      order_id: order.id,
-      status: charge.status,
-      instruction,
-    };
+    try {
+      // Direct Charge — déclenche immédiatement le prompt USSD sur le téléphone.
+      // C'est ce qui fait apparaître la transaction en attente sur MTN MoMo / Orange Money.
+      const charge = await directChargeMobileMoney({
+        reference: pay.reference,
+        channel: data.channel as MobileMoneyChannel,
+        phone: data.client_whatsapp,
+        orderId: order.id,
+      });
+
+      return {
+        order_id: order.id,
+        status: charge.status,
+        instruction,
+        checkout_url: null,
+        payment_mode: "direct_charge" as const,
+      };
+    } catch (err) {
+      await logPaymentEvent({
+        order_id: order.id,
+        notchpay_reference: pay.reference,
+        event_type: "direct_charge_failed_checkout_fallback",
+        level: "warn",
+        message:
+          err instanceof Error
+            ? err.message
+            : "Direct Charge indisponible, bascule vers Checkout Notch Pay.",
+        metadata: {
+          channel: data.channel,
+          fallback: "checkout",
+          authorization_url_available: Boolean(pay.authorization_url),
+        },
+      });
+
+      return {
+        order_id: order.id,
+        status: "checkout_fallback",
+        instruction:
+          "Le prompt automatique n'a pas répondu. Termine le paiement sur la page sécurisée Notch Pay.",
+        checkout_url: pay.authorization_url,
+        payment_mode: "checkout_fallback" as const,
+      };
+    }
   });
 
 
