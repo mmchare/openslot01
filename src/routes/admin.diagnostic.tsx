@@ -313,11 +313,26 @@ function LookupResult({
     const types = new Set(data.events.map((e) => e.event_type));
     const hasInit = types.has("notchpay_init_success") || types.has("notchpay_dev_mode");
     const hasInitErr = types.has("notchpay_init_error");
+    const hasDirectCharge = types.has("notchpay_direct_charge_success");
+    const hasDirectChargeErr = types.has("notchpay_direct_charge_error");
+    const hasCheckoutFallback = types.has("direct_charge_failed_checkout_fallback");
+    const hasStatusCheck = types.has("notchpay_status_check_success");
     const hasRedirect = types.has("redirect_to_gateway");
     const hasWebhook = types.has("webhook_received");
     const hasAlloc = types.has("webhook_allocation_success") || types.has("dev_simulate_success");
     const hasFail = types.has("webhook_payment_failed") || types.has("webhook_allocation_error");
-    return { hasInit, hasInitErr, hasRedirect, hasWebhook, hasAlloc, hasFail };
+    return {
+      hasInit,
+      hasInitErr,
+      hasDirectCharge,
+      hasDirectChargeErr,
+      hasCheckoutFallback,
+      hasStatusCheck,
+      hasRedirect,
+      hasWebhook,
+      hasAlloc,
+      hasFail,
+    };
   }, [data.events]);
 
   return (
@@ -363,9 +378,18 @@ function LookupResult({
           <div className="mt-4 flex flex-wrap gap-2 text-xs">
             <Step ok={summary.hasInit} label="Initialisation" />
             <Step
-              ok={summary.hasRedirect}
+              ok={summary.hasDirectCharge}
+              warn={summary.hasDirectChargeErr && !summary.hasCheckoutFallback}
+              label="Prompt opérateur"
+            />
+            <Step
+              ok={summary.hasCheckoutFallback || summary.hasRedirect}
               warn={summary.hasInitErr}
-              label="Redirection passerelle"
+              label="Fallback checkout"
+            />
+            <Step
+              ok={summary.hasStatusCheck}
+              label="Vérification statut"
             />
             <Step ok={summary.hasWebhook} label="Webhook reçu" />
             <Step

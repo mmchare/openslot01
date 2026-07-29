@@ -11,6 +11,7 @@ export type PaymentEventType =
   | "notchpay_init_error"
   | "notchpay_dev_mode"
   | "redirect_to_gateway"
+  | "direct_charge_failed_checkout_fallback"
   | "webhook_received"
   | "webhook_invalid_signature"
   | "webhook_order_not_found"
