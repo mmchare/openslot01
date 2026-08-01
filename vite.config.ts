@@ -12,8 +12,8 @@ export default defineConfig({
     // nitro/vite builds from this
     server: { entry: "server" },
   },
-  // OpenSlot est déployé en production sur un Cloudflare Worker (voir wrangler.jsonc
-  // et DEPLOYMENT.md). Le preset Cloudflare produit un worker SSR complet, ce qui
-  // évite les 404 obtenus avec un déploiement statique / preset Vercel.
-  nitro: { preset: "cloudflare_module" },
+  // Cible de déploiement :
+  // - Cloudflare Worker par défaut (wrangler.jsonc + DEPLOYMENT.md)
+  // - Vercel automatiquement quand le build tourne chez Vercel (env VERCEL=1)
+  nitro: { preset: process.env["VERCEL"] ? "vercel" : "cloudflare_module" },
 });
