@@ -12,8 +12,7 @@ export default defineConfig({
     // nitro/vite builds from this
     server: { entry: "server" },
   },
-  // Cible de déploiement :
-  // - Cloudflare Worker par défaut (wrangler.jsonc + DEPLOYMENT.md)
-  // - Vercel automatiquement quand le build tourne chez Vercel (env VERCEL=1)
-  nitro: { preset: process.env["VERCEL"] ? "vercel" : "cloudflare_module" },
+  // Nitro détecte Vercel automatiquement en CI et conserve Cloudflare Worker
+  // comme cible par défaut pour Lovable et les déploiements locaux.
+  nitro: true,
 });
