@@ -1,11 +1,11 @@
 import { createServerFn } from "@tanstack/react-start";
 import { z } from "zod";
-import { supabaseAdmin } from "@/integrations/supabase/client.server";
+import { createPublicCatalogClient } from "./catalog.server";
 import type { CatalogItem } from "./types";
 
 export const getCatalog = createServerFn({ method: "GET" }).handler(
   async (): Promise<CatalogItem[]> => {
-    const { data, error } = await supabaseAdmin
+    const { data, error } = await createPublicCatalogClient()
       .from("applications_catalog")
       .select("*");
     if (error) {
@@ -19,7 +19,7 @@ export const getCatalog = createServerFn({ method: "GET" }).handler(
 export const getApplicationById = createServerFn({ method: "GET" })
   .inputValidator((input) => z.object({ id: z.string().uuid() }).parse(input))
   .handler(async ({ data }): Promise<CatalogItem | null> => {
-    const { data: row, error } = await supabaseAdmin
+    const { data: row, error } = await createPublicCatalogClient()
       .from("applications_catalog")
       .select("*")
       .eq("id", data.id)
