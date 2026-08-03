@@ -281,6 +281,7 @@ export type Database = {
           slot_number: number
         }[]
       }
+      available_slot_count: { Args: { p_app_id: string }; Returns: number }
     }
     Enums: {
       order_status: "en_attente" | "paye" | "echoue"
