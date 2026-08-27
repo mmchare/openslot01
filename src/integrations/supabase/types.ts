@@ -10,7 +10,7 @@ export type Database = {
   // Allows to automatically instantiate createClient with right options
   // instead of createClient<Database, { PostgrestVersion: 'XX' }>(URL, KEY)
   __InternalSupabase: {
-    PostgrestVersion: "14.5"
+    PostgrestVersion: "14.17"
   }
   public: {
     Tables: {
@@ -282,6 +282,14 @@ export type Database = {
         }[]
       }
       available_slot_count: { Args: { p_app_id: string }; Returns: number }
+      handle_notchpay_payment: {
+        Args: { p_reference: string; p_status: string }
+        Returns: undefined
+      }
+      handle_notchpay_webhook: {
+        Args: { order_id: string; payment_status: string; signature: string }
+        Returns: undefined
+      }
     }
     Enums: {
       order_status: "en_attente" | "paye" | "echoue"
