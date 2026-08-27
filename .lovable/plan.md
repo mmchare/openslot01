@@ -1,82 +1,54 @@
-## Diagnostic confirmé
+# 3e solution : faire tourner OpenSlot sans clé service role
 
-- Le backend hébergé est sain : la base, le stockage et les fonctions serveur répondent normalement.
-- Le projet est configuré pour un rendu serveur TanStack Start + Cloudflare Worker, pas pour un déploiement statique Vercel classique.
-- Les paiements récents montrent que l’initialisation NotchPay réussit, puis l’échec arrive au moment du Direct Charge Mobile Money.
-- La documentation NotchPay confirme que le payload Direct Charge attendu est simple :
+## Idée
 
-```text
-POST /payments/{reference}
-{
-  "channel": "cm.mtn" | "cm.orange",
-  "data": { "phone": "+237XXXXXXXXX" }
-}
-```
+Aujourd'hui tout le serveur écrit dans la base avec la clé « service role » (droits illimités), impossible à récupérer sur Lovable Cloud, donc impossible à copier dans Vercel.
 
-- Les derniers logs disponibles montrent des erreurs NotchPay `500` sur Orange pendant le Direct Charge. Donc l’app crée bien la commande et la transaction NotchPay, mais elle bloque ensuite au déclenchement du prompt opérateur.
+La 3e voie : **déplacer les écritures sensibles dans la base elle-même**, sous forme de fonctions SQL protégées (`SECURITY DEFINER`) appelées avec la simple clé publique. La base exécute la logique avec ses propres droits, mais uniquement les opérations précises qu'on autorise. Résultat : le serveur n'a plus jamais besoin de la clé service role — ni sur Lovable, ni sur Vercel, ni ailleurs.
 
-## Objectif
+Pour les opérations réservées (admin, webhook NotchPay), on ajoute un **secret d'appel** partagé : la fonction SQL refuse de s'exécuter si l'appelant ne présente pas ce secret. Ce secret, lui, est une variable que tu peux créer toi-même et coller dans Vercel.
 
-Stabiliser la production en deux axes :
+## Ce qui sera fait
 
-1. Remettre un déploiement fiable via Cloudflare, puisque Vercel n’est pas le bon hébergement principal pour cette architecture.
-2. Rendre le paiement robuste : ne plus bloquer une commande quand NotchPay Direct Charge échoue, et garder un parcours utilisable pour Orange et MTN.
+### 1. Fonctions SQL sécurisées (migration base de données)
 
-## Plan d’action
+Créées côté base, appelables avec la clé publique :
 
-### 1. Déploiement : arrêter de dépendre de Vercel pour la production
+- `create_order_secure(...)` : vérifie que le produit existe, est actif et en stock, crée la commande, renvoie son identifiant et son montant. Le prix vient de la base, jamais du navigateur.
+- `set_order_reference(order_id, reference, secret)` : enregistre la référence NotchPay.
+- `log_payment_event(...)` : journalise un événement de paiement.
+- `get_order_status(order_id)` : renvoie le suivi de commande, et les accès livrés **uniquement** si la commande est payée.
+- `mark_order_paid(reference, secret)` / `mark_order_failed(reference, secret)` : réservées au webhook et à la synchronisation NotchPay, protégées par le secret.
+- `admin_*` : les opérations du panneau admin (produits, prix, slots, APK) passent par des fonctions équivalentes protégées par le même contrôle de secret.
 
-- Ajouter une configuration de déploiement Cloudflare claire dans le projet :
-  - script dédié dans `package.json` pour construire et déployer le Worker ;
-  - documentation courte des variables nécessaires ;
-  - vérification que `wrangler.jsonc` pointe bien vers l’entrée Worker SSR.
-- Garder Vercel uniquement comme ancien miroir ou le désactiver côté plateforme, car un déploiement statique Vercel peut afficher des 404 ou servir une ancienne version sans les fonctions serveur.
-- Supprimer ou neutraliser les fichiers de redirection statique qui entretiennent la confusion avec un hébergement SPA/statique.
+Toutes ces fonctions sont en `SECURITY DEFINER` avec `search_path` figé, et ne renvoient jamais de données sensibles sans condition.
 
-### 2. Paiement : corriger le flux NotchPay sans casser Orange
+### 2. Un secret applicatif à la place de la clé service role
 
-- Revenir à un Direct Charge strictement conforme à la documentation :
+Nouvelle variable `APP_SERVER_SECRET` (valeur aléatoire, générée puis stockée), utilisée par le serveur pour appeler les fonctions protégées. Tu pourras la recopier dans Vercel ou Cloudflare.
 
-```text
-{ channel, data: { phone: "+237..." } }
-```
+### 3. Réécriture côté serveur
 
-- Supprimer le fallback `account_number`, car il n’est pas dans la doc Direct Charge lue et peut provoquer des comportements imprévisibles.
-- Changer `createOrder` pour ne plus faire échouer toute la commande si Direct Charge renvoie une erreur serveur NotchPay :
-  - la commande reste `en_attente` ;
-  - la référence NotchPay est conservée ;
-  - l’utilisateur est envoyé vers la page NotchPay hébergée (`authorization_url`) comme fallback ;
-  - l’événement diagnostic indique clairement `direct_charge_failed_checkout_fallback`.
-- Conserver le Direct Charge quand il réussit, pour continuer à déclencher le prompt opérateur directement.
+- Remplacer `supabaseAdmin` par un client Supabase « public » (déjà existant dans `catalog.server.ts`) dans :
+  - `orders.functions.ts` (création de commande, page succès, lien APK)
+  - `payment-events.server.ts`
+  - `order-payment-sync.server.ts`
+  - `admin.functions.ts`
+  - `api/public/webhooks/notchpay.ts`
+- Toutes les écritures passent par les fonctions SQL ci-dessus.
+- Le lien de téléchargement APK signé : le bucket `apk-files` reste privé, la signature se fait via une fonction SQL qui ne s'exécute que si la commande est payée.
+- `client.server.ts` reste en place mais n'est plus importé nulle part.
 
-### 3. Séparer le comportement Orange et MTN
+### 4. Vérifications
 
-- Orange : Direct Charge d’abord, fallback checkout immédiat si NotchPay renvoie `500` ou une erreur opérateur.
-- MTN : Direct Charge d’abord, puis page d’attente avec instructions `*126#`; si NotchPay renvoie une erreur directe, fallback checkout au lieu d’afficher une erreur finale.
-- Ne plus afficher “Paiement échoué” trop vite pour MTN quand un Direct Charge vient juste de répondre `processing`.
+- Aucune politique d'accès ouverte : les tables restent verrouillées, seules les fonctions contrôlées écrivent.
+- Aucune écriture directe autorisée pour l'anonyme sur `orders`, `slots_stock`, `applications`.
+- Test complet : catalogue → commande → paiement Orange/MTN → webhook → livraison des accès → panneau admin.
 
-### 4. Améliorer le diagnostic admin
+## Résultat
 
-- Ajouter dans les logs paiement :
-  - payload utilisé (`phone`) ;
-  - canal choisi (`cm.orange` / `cm.mtn`) ;
-  - type de fallback (`checkout`, `direct_charge`) ;
-  - statut NotchPay brut.
-- Sur la page diagnostic admin, rendre visible si une commande est bloquée par :
-  - initialisation NotchPay ;
-  - Direct Charge opérateur ;
-  - webhook absent ;
-  - allocation stock.
+Le projet fonctionne à l'identique, mais peut être déployé n'importe où (Vercel, Cloudflare, autre) avec seulement : URL Supabase, clé publique, secret applicatif, clés NotchPay, mot de passe admin.
 
-### 5. Validation après correction
+## Point d'attention
 
-- Tester en local sans déclencher de vrai débit quand possible : création commande, redirection, conservation de la référence NotchPay.
-- Tester un paiement Orange réel : vérifier que si Direct Charge marche, l’utilisateur reste sur la page d’attente puis passe en payé.
-- Tester un paiement MTN réel : vérifier que l’utilisateur reçoit soit l’instruction `*126#`, soit le fallback checkout, mais jamais une erreur bloquante immédiate.
-- Vérifier que le webhook `/api/public/webhooks/notchpay` reste accessible sur l’URL Cloudflare publiée.
-
-## Résultat attendu
-
-- Les mises à jour ne dépendront plus de Vercel : Cloudflare deviendra la cible de production cohérente avec le projet.
-- Une panne ou anomalie NotchPay Direct Charge ne cassera plus le paiement : l’utilisateur aura toujours un chemin de secours via la page NotchPay.
-- Orange retrouvera un flux fonctionnel, et MTN sera isolé avec une logique plus tolérante au comportement instable de l’opérateur.
+Le secret applicatif devient la pièce critique : s'il fuite, quelqu'un peut marquer une commande comme payée. Il ne sera jamais envoyé au navigateur — uniquement utilisé côté serveur.
