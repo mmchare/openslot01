@@ -14,6 +14,27 @@ export type Database = {
   }
   public: {
     Tables: {
+      app_config: {
+        Row: {
+          created_at: string
+          key: string
+          updated_at: string
+          value: string
+        }
+        Insert: {
+          created_at?: string
+          key: string
+          updated_at?: string
+          value: string
+        }
+        Update: {
+          created_at?: string
+          key?: string
+          updated_at?: string
+          value?: string
+        }
+        Relationships: []
+      }
       applications: {
         Row: {
           apk_file_path: string | null
@@ -282,6 +303,15 @@ export type Database = {
         }[]
       }
       available_slot_count: { Args: { p_app_id: string }; Returns: number }
+      create_order_secure: {
+        Args: {
+          p_application_id: string
+          p_client_email: string
+          p_client_name: string
+          p_client_whatsapp: string
+        }
+        Returns: Json
+      }
       handle_notchpay_payment: {
         Args: { p_reference: string; p_status: string }
         Returns: undefined
@@ -289,6 +319,52 @@ export type Database = {
       handle_notchpay_webhook: {
         Args: { order_id: string; payment_status: string; signature: string }
         Returns: undefined
+      }
+      srv_admin: {
+        Args: { p_action: string; p_payload?: Json; p_secret: string }
+        Returns: Json
+      }
+      srv_assert_secret: { Args: { p_secret: string }; Returns: undefined }
+      srv_find_order_by_reference: {
+        Args: { p_reference: string; p_secret: string; p_trxref: string }
+        Returns: Json
+      }
+      srv_get_order: {
+        Args: { p_order_id: string; p_secret: string }
+        Returns: Json
+      }
+      srv_last_mtn_processing_event: {
+        Args: { p_order_id: string; p_secret: string }
+        Returns: Json
+      }
+      srv_log_payment_event: {
+        Args: {
+          p_event_type: string
+          p_level: string
+          p_message: string
+          p_metadata: Json
+          p_order_id: string
+          p_reference: string
+          p_secret: string
+        }
+        Returns: undefined
+      }
+      srv_mark_order_paid: {
+        Args: { p_order_id: string; p_secret: string }
+        Returns: Json
+      }
+      srv_set_order_reference: {
+        Args: { p_order_id: string; p_reference: string; p_secret: string }
+        Returns: undefined
+      }
+      srv_set_order_status: {
+        Args: {
+          p_expected_status: string
+          p_order_id: string
+          p_secret: string
+          p_status: string
+        }
+        Returns: boolean
       }
     }
     Enums: {
