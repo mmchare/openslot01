@@ -1,6 +1,6 @@
 import { createServerFn } from "@tanstack/react-start";
 import { z } from "zod";
-import { supabaseAdmin } from "@/integrations/supabase/client.server";
+import { serverDb, srvAdmin } from "./server-db.server";
 
 function checkPassword(password: string) {
   const expected = process.env.ADMIN_PASSWORD;
@@ -16,6 +16,23 @@ function checkPassword(password: string) {
 
 const PasswordOnly = z.object({ password: z.string().min(1).max(200) });
 
+export interface AdminApp {
+  id: string;
+  name: string;
+  category: string;
+  price_fcfa: number;
+  image_url: string | null;
+  subscription_duration_days: number;
+  is_active: boolean;
+  sort_order: number;
+  product_type: "account" | "apk";
+  apk_file_path: string | null;
+  apk_version: string | null;
+  apk_size_bytes: number | null;
+  stock_disponible: number;
+  stock_vendu: number;
+}
+
 export const verifyAdminPassword = createServerFn({ method: "POST" })
   .inputValidator((input) => PasswordOnly.parse(input))
   .handler(async ({ data }) => {
@@ -27,34 +44,7 @@ export const adminListApps = createServerFn({ method: "POST" })
   .inputValidator((input) => PasswordOnly.parse(input))
   .handler(async ({ data }) => {
     checkPassword(data.password);
-    const { data: apps, error } = await supabaseAdmin
-      .from("applications")
-      .select(
-        "id, name, category, price_fcfa, image_url, subscription_duration_days, is_active, sort_order, product_type, apk_file_path, apk_version, apk_size_bytes",
-      )
-      .order("sort_order", { ascending: true });
-    if (error) throw new Error(error.message);
-
-    const ids = (apps ?? []).map((a) => a.id);
-    const counts: Record<string, { dispo: number; vendu: number }> = {};
-    for (const id of ids) counts[id] = { dispo: 0, vendu: 0 };
-    if (ids.length) {
-      const { data: stock } = await supabaseAdmin
-        .from("slots_stock")
-        .select("application_id, status")
-        .in("application_id", ids);
-      for (const s of stock ?? []) {
-        const c = counts[s.application_id];
-        if (!c) continue;
-        if (s.status === "disponible") c.dispo++;
-        else if (s.status === "vendu") c.vendu++;
-      }
-    }
-    return (apps ?? []).map((a) => ({
-      ...a,
-      stock_disponible: counts[a.id]?.dispo ?? 0,
-      stock_vendu: counts[a.id]?.vendu ?? 0,
-    }));
+    return await srvAdmin<AdminApp[]>("list_apps");
   });
 
 export const adminCreateApp = createServerFn({ method: "POST" })
@@ -71,7 +61,7 @@ export const adminCreateApp = createServerFn({ method: "POST" })
   )
   .handler(async ({ data }) => {
     checkPassword(data.password);
-    const { error } = await supabaseAdmin.from("applications").insert({
+    await srvAdmin("create_app", {
       name: data.name,
       category: data.category,
       description: data.description || null,
@@ -79,9 +69,7 @@ export const adminCreateApp = createServerFn({ method: "POST" })
       image_url: data.image_url || null,
       subscription_duration_days: data.subscription_duration_days,
       product_type: data.product_type ?? "account",
-      is_active: true,
     });
-    if (error) throw new Error(error.message);
     return { ok: true };
   });
 
@@ -98,11 +86,10 @@ export const adminUpdateAppImage = createServerFn({ method: "POST" })
     if (url && !/^https?:\/\//i.test(url)) {
       throw new Error("L'URL de l'icône doit commencer par http(s)://");
     }
-    const { error } = await supabaseAdmin
-      .from("applications")
-      .update({ image_url: url })
-      .eq("id", data.application_id);
-    if (error) throw new Error(error.message);
+    await srvAdmin("update_app", {
+      application_id: data.application_id,
+      image_url: url,
+    });
     return { ok: true };
   });
 
@@ -121,26 +108,25 @@ export const adminUploadAppImage = createServerFn({ method: "POST" })
     if (!data.content_type.startsWith("image/")) {
       throw new Error("Le fichier doit être une image.");
     }
-    const ext = (data.file_name.split(".").pop() || "png")
-      .toLowerCase()
-      .replace(/[^a-z0-9]/g, "")
-      .slice(0, 5) || "png";
+    const ext =
+      (data.file_name.split(".").pop() || "png")
+        .toLowerCase()
+        .replace(/[^a-z0-9]/g, "")
+        .slice(0, 5) || "png";
     const path = `${crypto.randomUUID()}.${ext}`;
     const bytes = Buffer.from(data.data_base64, "base64");
-    const { error: upErr } = await supabaseAdmin.storage
+    const db = serverDb();
+    const { error: upErr } = await db.storage
       .from("app-icons")
       .upload(path, bytes, { contentType: data.content_type, upsert: false });
     if (upErr) throw new Error(upErr.message);
-    const { data: pub } = supabaseAdmin.storage
-      .from("app-icons")
-      .getPublicUrl(path);
+    const { data: pub } = db.storage.from("app-icons").getPublicUrl(path);
     const publicUrl = pub.publicUrl;
     if (data.application_id) {
-      const { error } = await supabaseAdmin
-        .from("applications")
-        .update({ image_url: publicUrl })
-        .eq("id", data.application_id);
-      if (error) throw new Error(error.message);
+      await srvAdmin("update_app", {
+        application_id: data.application_id,
+        image_url: publicUrl,
+      });
     }
     return { ok: true, image_url: publicUrl };
   });
@@ -154,14 +140,12 @@ export const adminUpdateAppDuration = createServerFn({ method: "POST" })
   )
   .handler(async ({ data }) => {
     checkPassword(data.password);
-    const { error } = await supabaseAdmin
-      .from("applications")
-      .update({ subscription_duration_days: data.subscription_duration_days })
-      .eq("id", data.application_id);
-    if (error) throw new Error(error.message);
+    await srvAdmin("update_app", {
+      application_id: data.application_id,
+      subscription_duration_days: data.subscription_duration_days,
+    });
     return { ok: true };
   });
-
 
 export const adminToggleApp = createServerFn({ method: "POST" })
   .inputValidator((input) =>
@@ -172,11 +156,10 @@ export const adminToggleApp = createServerFn({ method: "POST" })
   )
   .handler(async ({ data }) => {
     checkPassword(data.password);
-    const { error } = await supabaseAdmin
-      .from("applications")
-      .update({ is_active: data.is_active })
-      .eq("id", data.application_id);
-    if (error) throw new Error(error.message);
+    await srvAdmin("update_app", {
+      application_id: data.application_id,
+      is_active: data.is_active,
+    });
     return { ok: true };
   });
 
@@ -189,13 +172,22 @@ export const adminUpdateAppPrice = createServerFn({ method: "POST" })
   )
   .handler(async ({ data }) => {
     checkPassword(data.password);
-    const { error } = await supabaseAdmin
-      .from("applications")
-      .update({ price_fcfa: data.price_fcfa })
-      .eq("id", data.application_id);
-    if (error) throw new Error(error.message);
+    await srvAdmin("update_app", {
+      application_id: data.application_id,
+      price_fcfa: data.price_fcfa,
+    });
     return { ok: true };
   });
+
+export interface AdminSlot {
+  id: string;
+  account_email: string;
+  slot_number: number;
+  profile_name: string | null;
+  profile_password: string | null;
+  status: "disponible" | "vendu" | "bloque";
+  created_at: string;
+}
 
 export const adminListSlots = createServerFn({ method: "POST" })
   .inputValidator((input) =>
@@ -203,15 +195,9 @@ export const adminListSlots = createServerFn({ method: "POST" })
   )
   .handler(async ({ data }) => {
     checkPassword(data.password);
-    const { data: slots, error } = await supabaseAdmin
-      .from("slots_stock")
-      .select(
-        "id, account_email, slot_number, profile_name, profile_password, status, created_at",
-      )
-      .eq("application_id", data.application_id)
-      .order("created_at", { ascending: false });
-    if (error) throw new Error(error.message);
-    return slots ?? [];
+    return await srvAdmin<AdminSlot[]>("list_slots", {
+      application_id: data.application_id,
+    });
   });
 
 export const adminAddSlot = createServerFn({ method: "POST" })
@@ -227,16 +213,14 @@ export const adminAddSlot = createServerFn({ method: "POST" })
   )
   .handler(async ({ data }) => {
     checkPassword(data.password);
-    const { error } = await supabaseAdmin.from("slots_stock").insert({
+    await srvAdmin("add_slot", {
       application_id: data.application_id,
       account_email: data.account_email,
       account_password: data.account_password,
       slot_number: data.slot_number,
       profile_name: data.profile_name || null,
       profile_password: data.profile_password || null,
-      status: "disponible",
     });
-    if (error) throw new Error(error.message);
     return { ok: true };
   });
 
@@ -246,21 +230,7 @@ export const adminDeleteSlot = createServerFn({ method: "POST" })
   )
   .handler(async ({ data }) => {
     checkPassword(data.password);
-    // Sécurité: on n'autorise la suppression que pour les slots disponibles
-    const { data: slot } = await supabaseAdmin
-      .from("slots_stock")
-      .select("status")
-      .eq("id", data.slot_id)
-      .maybeSingle();
-    if (!slot) throw new Error("Slot introuvable.");
-    if (slot.status !== "disponible") {
-      throw new Error("Impossible de supprimer un slot déjà vendu/réservé.");
-    }
-    const { error } = await supabaseAdmin
-      .from("slots_stock")
-      .delete()
-      .eq("id", data.slot_id);
-    if (error) throw new Error(error.message);
+    await srvAdmin("delete_slot", { slot_id: data.slot_id });
     return { ok: true };
   });
 
@@ -277,13 +247,14 @@ export const adminCreateApkUploadUrl = createServerFn({ method: "POST" })
   )
   .handler(async ({ data }) => {
     checkPassword(data.password);
-    const ext = (data.file_name.split(".").pop() || "apk")
-      .toLowerCase()
-      .replace(/[^a-z0-9]/g, "")
-      .slice(0, 5) || "apk";
+    const ext =
+      (data.file_name.split(".").pop() || "apk")
+        .toLowerCase()
+        .replace(/[^a-z0-9]/g, "")
+        .slice(0, 5) || "apk";
     const path = `${data.application_id}/${crypto.randomUUID()}.${ext}`;
-    const { data: signed, error } = await supabaseAdmin.storage
-      .from("apk-files")
+    const { data: signed, error } = await serverDb()
+      .storage.from("apk-files")
       .createSignedUploadUrl(path);
     if (error || !signed) {
       throw new Error(error?.message || "Impossible de créer l'URL d'upload.");
@@ -308,8 +279,9 @@ export const adminFinalizeApkUpload = createServerFn({ method: "POST" })
   )
   .handler(async ({ data }) => {
     checkPassword(data.password);
+    const db = serverDb();
 
-    const { data: head } = await supabaseAdmin.storage
+    const { data: head } = await db.storage
       .from("apk-files")
       .list(data.apk_file_path.split("/").slice(0, -1).join("/"), {
         search: data.apk_file_path.split("/").pop(),
@@ -318,25 +290,20 @@ export const adminFinalizeApkUpload = createServerFn({ method: "POST" })
       throw new Error("Le fichier n'a pas été trouvé dans le stockage.");
     }
 
-    const { data: prev } = await supabaseAdmin
-      .from("applications")
-      .select("apk_file_path, product_type")
-      .eq("id", data.application_id)
-      .maybeSingle();
+    const prev = await srvAdmin<{ apk_file_path: string | null } | null>("get_app", {
+      application_id: data.application_id,
+    });
 
-    const { error } = await supabaseAdmin
-      .from("applications")
-      .update({
-        product_type: "apk",
-        apk_file_path: data.apk_file_path,
-        apk_size_bytes: data.apk_size_bytes,
-        apk_version: data.apk_version?.trim() || null,
-      })
-      .eq("id", data.application_id);
-    if (error) throw new Error(error.message);
+    await srvAdmin("update_app", {
+      application_id: data.application_id,
+      product_type: "apk",
+      apk_file_path: data.apk_file_path,
+      apk_size_bytes: data.apk_size_bytes,
+      apk_version: data.apk_version?.trim() || null,
+    });
 
     if (prev?.apk_file_path && prev.apk_file_path !== data.apk_file_path) {
-      await supabaseAdmin.storage.from("apk-files").remove([prev.apk_file_path]);
+      await db.storage.from("apk-files").remove([prev.apk_file_path]);
     }
     return { ok: true };
   });
@@ -351,11 +318,10 @@ export const adminUpdateApkVersion = createServerFn({ method: "POST" })
   )
   .handler(async ({ data }) => {
     checkPassword(data.password);
-    const { error } = await supabaseAdmin
-      .from("applications")
-      .update({ apk_version: data.apk_version?.trim() || null })
-      .eq("id", data.application_id);
-    if (error) throw new Error(error.message);
+    await srvAdmin("update_app", {
+      application_id: data.application_id,
+      apk_version: data.apk_version?.trim() || null,
+    });
     return { ok: true };
   });
 
@@ -363,8 +329,28 @@ export const adminUpdateApkVersion = createServerFn({ method: "POST" })
 //  DIAGNOSTIC : événements de paiement
 // ============================================================
 
-// Récupère les événements de paiement par order_id (UUID complet ou les
-// 8 premiers caractères) ou par référence Notch Pay.
+export interface AdminPaymentEvent {
+  id: string;
+  order_id: string | null;
+  notchpay_reference: string | null;
+  event_type: string;
+  level: string;
+  message: string | null;
+  metadata: Record<string, unknown> | null;
+  created_at: string;
+}
+
+export interface AdminDiagnosticOrder {
+  id: string;
+  status: string;
+  client_name: string;
+  client_whatsapp: string;
+  client_email: string;
+  amount_paid: number;
+  notchpay_reference: string | null;
+  created_at: string;
+}
+
 export const adminGetPaymentEvents = createServerFn({ method: "POST" })
   .inputValidator((input) =>
     PasswordOnly.extend({
@@ -373,79 +359,13 @@ export const adminGetPaymentEvents = createServerFn({ method: "POST" })
   )
   .handler(async ({ data }) => {
     checkPassword(data.password);
-    const q = data.query.trim();
-
-    // Trouve la commande par UUID exact, préfixe d'UUID, ou référence Notch Pay
-    let orderId: string | null = null;
-    let order: {
-      id: string;
-      status: string;
-      client_name: string;
-      client_whatsapp: string;
-      client_email: string;
-      amount_paid: number;
-      notchpay_reference: string | null;
-      created_at: string;
-    } | null = null;
-
-    const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
-
-    if (uuidRegex.test(q)) {
-      const { data: o } = await supabaseAdmin
-        .from("orders")
-        .select(
-          "id, status, client_name, client_whatsapp, client_email, amount_paid, notchpay_reference, created_at",
-        )
-        .eq("id", q)
-        .maybeSingle();
-      order = o ?? null;
-      orderId = o?.id ?? null;
-    } else {
-      // Référence Notch Pay (peut commencer par DEV_)
-      const { data: o } = await supabaseAdmin
-        .from("orders")
-        .select(
-          "id, status, client_name, client_whatsapp, client_email, amount_paid, notchpay_reference, created_at",
-        )
-        .eq("notchpay_reference", q)
-        .maybeSingle();
-      if (o) {
-        order = o;
-        orderId = o.id;
-      } else {
-        // Préfixe d'UUID (au moins 8 chars)
-        const { data: list } = await supabaseAdmin
-          .from("orders")
-          .select(
-            "id, status, client_name, client_whatsapp, client_email, amount_paid, notchpay_reference, created_at",
-          )
-          .ilike("id", `${q}%`)
-          .limit(1);
-        if (list && list.length > 0) {
-          order = list[0];
-          orderId = list[0].id;
-        }
-      }
-    }
-
-    // Récupère les événements (par order_id et/ou référence)
-    let eventsQuery = supabaseAdmin
-      .from("payment_events")
-      .select("id, order_id, notchpay_reference, event_type, level, message, metadata, created_at")
-      .order("created_at", { ascending: true })
-      .limit(200);
-
-    if (orderId) {
-      eventsQuery = eventsQuery.eq("order_id", orderId);
-    } else {
-      eventsQuery = eventsQuery.eq("notchpay_reference", q);
-    }
-
-    const { data: events } = await eventsQuery;
-
+    const res = await srvAdmin<{
+      order: AdminDiagnosticOrder | null;
+      events: AdminPaymentEvent[];
+    }>("payment_events", { query: data.query.trim() });
     return {
-      order,
-      events: events ?? [],
+      order: res?.order ?? null,
+      events: res?.events ?? [],
     };
   });
 
@@ -454,26 +374,16 @@ export const adminListRecentPaymentOrders = createServerFn({ method: "POST" })
   .inputValidator((input) => PasswordOnly.parse(input))
   .handler(async ({ data }) => {
     checkPassword(data.password);
-    const since = new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString();
-    const { data: orders, error } = await supabaseAdmin
-      .from("orders")
-      .select(
-        "id, status, client_name, client_whatsapp, amount_paid, notchpay_reference, created_at, applications(name)",
-      )
-      .gte("created_at", since)
-      .order("created_at", { ascending: false })
-      .limit(100);
-    if (error) throw new Error(error.message);
-    return (orders ?? []).map((o) => ({
-      id: o.id,
-      status: o.status,
-      client_name: o.client_name,
-      client_whatsapp: o.client_whatsapp,
-      amount_paid: o.amount_paid,
-      notchpay_reference: o.notchpay_reference,
-      created_at: o.created_at,
-      application_name:
-        (o.applications as { name: string } | null)?.name ?? "—",
-    }));
+    return await srvAdmin<
+      Array<{
+        id: string;
+        status: string;
+        client_name: string;
+        client_whatsapp: string;
+        amount_paid: number;
+        notchpay_reference: string | null;
+        created_at: string;
+        application_name: string;
+      }>
+    >("recent_orders");
   });
-

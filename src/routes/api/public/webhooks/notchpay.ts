@@ -1,5 +1,4 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { supabaseAdmin } from "@/integrations/supabase/client.server";
 import {
   isNotchPaymentFailed,
   isNotchPaymentSuccessful,
@@ -7,6 +6,11 @@ import {
 } from "@/lib/notchpay.server";
 import { getMtnManualApprovalState } from "@/lib/order-payment-sync.server";
 import { logPaymentEvent } from "@/lib/payment-events.server";
+import {
+  srvFindOrderByReference,
+  srvMarkOrderPaid,
+  srvSetOrderStatus,
+} from "@/lib/server-db.server";
 import {
   sendTelegramAlert,
   buildStockAlertMessage,
@@ -47,21 +51,9 @@ export const Route = createFileRoute("/api/public/webhooks/notchpay")({
           reference?: string;
           trxref?: string;
           status?: string;
-          data?: {
-            reference?: string;
-            trxref?: string;
-            status?: string;
-          };
-          transaction?: {
-            reference?: string;
-            trxref?: string;
-            status?: string;
-          };
-          payment?: {
-            reference?: string;
-            trxref?: string;
-            status?: string;
-          };
+          data?: { reference?: string; trxref?: string; status?: string };
+          transaction?: { reference?: string; trxref?: string; status?: string };
+          payment?: { reference?: string; trxref?: string; status?: string };
         };
         try {
           payload = JSON.parse(rawBody);
@@ -96,22 +88,7 @@ export const Route = createFileRoute("/api/public/webhooks/notchpay")({
           return new Response("Missing fields", { status: 400 });
         }
 
-        // Récupère la commande liée
-        let orderQuery = supabaseAdmin
-          .from("orders")
-          .select("id, status, application_id, created_at, client_whatsapp")
-          .eq("notchpay_reference", reference);
-
-        let { data: order } = await orderQuery.maybeSingle();
-
-        if (!order && trxref && /^[0-9a-f-]{36}$/i.test(trxref)) {
-          const { data: byTrxref } = await supabaseAdmin
-            .from("orders")
-            .select("id, status, application_id, created_at, client_whatsapp")
-            .eq("id", trxref)
-            .maybeSingle();
-          order = byTrxref;
-        }
+        const order = await srvFindOrderByReference(reference, trxref ?? null);
 
         if (!order) {
           await logPaymentEvent({
@@ -128,19 +105,18 @@ export const Route = createFileRoute("/api/public/webhooks/notchpay")({
         }
 
         if (status && isNotchPaymentSuccessful(status)) {
-          // Attribution atomique du slot
-          const { error: allocErr } = await supabaseAdmin.rpc(
-            "allocate_slot_for_order",
-            { p_order_id: order.id },
-          );
-          if (allocErr) {
-            console.error("[notchpay webhook] allocation error:", allocErr);
+          let result: { application_name: string | null; remaining_stock: number | null };
+          try {
+            result = await srvMarkOrderPaid(order.id);
+          } catch (err) {
+            const message = err instanceof Error ? err.message : "Allocation échouée";
+            console.error("[notchpay webhook] allocation error:", message);
             await logPaymentEvent({
               order_id: order.id,
               notchpay_reference: reference,
               event_type: "webhook_allocation_error",
               level: "error",
-              message: allocErr.message,
+              message,
             });
             return new Response("Allocation failed", { status: 500 });
           }
@@ -151,27 +127,14 @@ export const Route = createFileRoute("/api/public/webhooks/notchpay")({
             event_type: "webhook_allocation_success",
           });
 
-          // Vérifie le stock restant pour alerte
-          const { count } = await supabaseAdmin
-            .from("slots_stock")
-            .select("id", { count: "exact", head: true })
-            .eq("application_id", order.application_id)
-            .eq("status", "disponible");
-
-          if (count === 0) {
-            const { data: app } = await supabaseAdmin
-              .from("applications")
-              .select("name")
-              .eq("id", order.application_id)
-              .maybeSingle();
+          if (result.remaining_stock === 0) {
             await sendTelegramAlert(
-              buildStockAlertMessage(app?.name ?? "Produit"),
+              buildStockAlertMessage(result.application_name ?? "Produit"),
             );
           }
         } else if (status && isNotchPaymentFailed(status)) {
           // MTN peut envoyer un statut d'échec très vite alors que la validation
-          // manuelle *126# est encore possible. Ne clôture pas la commande avant
-          // la fin de cette fenêtre de validation.
+          // manuelle *126# est encore possible.
           const grace = getMtnManualApprovalState(
             order.created_at,
             order.client_whatsapp,
@@ -191,10 +154,7 @@ export const Route = createFileRoute("/api/public/webhooks/notchpay")({
             return new Response("ok", { status: 200 });
           }
 
-          await supabaseAdmin
-            .from("orders")
-            .update({ status: "echoue" })
-            .eq("id", order.id);
+          await srvSetOrderStatus(order.id, "echoue");
           await logPaymentEvent({
             order_id: order.id,
             notchpay_reference: reference,

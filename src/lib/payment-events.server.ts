@@ -2,7 +2,7 @@
 // so we can debug failures on a client's phone (especially Mobile Money USSD
 // push issues). NEVER store full PINs, full card numbers, or secret keys.
 
-import { supabaseAdmin } from "@/integrations/supabase/client.server";
+import { serverDb, serverSecret } from "./server-db.server";
 
 export type PaymentEventType =
   | "order_created"
@@ -71,16 +71,18 @@ export function sanitizeMetadata(meta: Record<string, unknown>): Record<string, 
 
 export async function logPaymentEvent(input: LogPaymentEventInput): Promise<void> {
   try {
-    await supabaseAdmin.from("payment_events").insert({
-      order_id: input.order_id ?? null,
-      notchpay_reference: input.notchpay_reference ?? null,
-      event_type: input.event_type,
-      level: input.level ?? "info",
-      message: input.message ?? null,
-      metadata: input.metadata
-        ? (sanitizeMetadata(input.metadata) as unknown as never)
-        : null,
+    const { error } = await serverDb().rpc("srv_log_payment_event", {
+      p_secret: serverSecret(),
+      p_order_id: (input.order_id ?? null) as unknown as string,
+      p_reference: (input.notchpay_reference ?? null) as unknown as string,
+      p_event_type: input.event_type,
+      p_level: input.level ?? "info",
+      p_message: (input.message ?? null) as unknown as string,
+      p_metadata: (input.metadata
+        ? sanitizeMetadata(input.metadata)
+        : null) as never,
     });
+    if (error) throw new Error(error.message);
   } catch (err) {
     // Never let logging break the payment flow.
     console.error("[payment-events] log failed:", err);

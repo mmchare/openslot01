@@ -1,5 +1,10 @@
-import { supabaseAdmin } from "@/integrations/supabase/client.server";
 import { logPaymentEvent } from "./payment-events.server";
+import {
+  srvGetOrder,
+  srvLastMtnProcessingEvent,
+  srvMarkOrderPaid,
+  srvSetOrderStatus,
+} from "./server-db.server";
 import {
   detectCameroonChannel,
   getNotchPaymentStatus,
@@ -43,35 +48,26 @@ export async function recoverRecentMtnProcessingOrder(input: {
   const grace = getMtnManualApprovalState(input.createdAt, input.phone);
   if (!grace.shouldDefer) return false;
 
-  const { data: lastMtnProcessing } = await supabaseAdmin
-    .from("payment_events")
-    .select("id, notchpay_reference, created_at, metadata")
-    .eq("order_id", input.orderId)
-    .eq("event_type", "notchpay_direct_charge_success")
-    .eq("metadata->>channel", "cm.mtn")
-    .in("metadata->>status", ["processing", "pending"])
-    .order("created_at", { ascending: false })
-    .limit(1)
-    .maybeSingle();
-
+  const lastMtnProcessing = await srvLastMtnProcessingEvent(input.orderId);
   if (!lastMtnProcessing) return false;
 
-  const { error } = await supabaseAdmin
-    .from("orders")
-    .update({ status: "en_attente" })
-    .eq("id", input.orderId)
-    .eq("status", "echoue");
-
-  if (error) {
+  let restored = false;
+  try {
+    restored = await srvSetOrderStatus(input.orderId, "en_attente", "echoue");
+  } catch (err) {
     await logPaymentEvent({
       order_id: input.orderId,
       notchpay_reference: lastMtnProcessing.notchpay_reference,
       event_type: "notchpay_status_check_error",
       level: "error",
-      message: `Impossible de remettre la commande MTN en attente: ${error.message}`,
+      message: `Impossible de remettre la commande MTN en attente: ${
+        err instanceof Error ? err.message : "erreur inconnue"
+      }`,
     });
     return false;
   }
+
+  if (!restored) return false;
 
   await logPaymentEvent({
     order_id: input.orderId,
@@ -94,19 +90,19 @@ export async function syncOrderWithNotchPay(input: SyncOrderInput): Promise<void
   const remote = await getNotchPaymentStatus(input.notchpayReference, input.orderId);
 
   if (isNotchPaymentSuccessful(remote.status)) {
-    const { error } = await supabaseAdmin.rpc("allocate_slot_for_order", {
-      p_order_id: input.orderId,
-    });
-    if (error) {
+    try {
+      await srvMarkOrderPaid(input.orderId);
+    } catch (err) {
+      const message = err instanceof Error ? err.message : "Allocation échouée";
       await logPaymentEvent({
         order_id: input.orderId,
         notchpay_reference: input.notchpayReference,
         event_type: "webhook_allocation_error",
         level: "error",
-        message: error.message,
+        message,
         metadata: { source: "status_poll", notchpay_status: remote.status },
       });
-      throw new Error(error.message);
+      throw new Error(message);
     }
     await logPaymentEvent({
       order_id: input.orderId,
@@ -118,11 +114,7 @@ export async function syncOrderWithNotchPay(input: SyncOrderInput): Promise<void
   }
 
   if (isNotchPaymentFailed(remote.status)) {
-    const { data: orderTiming } = await supabaseAdmin
-      .from("orders")
-      .select("created_at, client_whatsapp")
-      .eq("id", input.orderId)
-      .maybeSingle();
+    const orderTiming = await srvGetOrder(input.orderId);
 
     // MTN renvoie parfois "failed" quelques secondes après le Direct Charge,
     // alors que NotchPay demande encore une validation manuelle via *126#.
@@ -146,11 +138,7 @@ export async function syncOrderWithNotchPay(input: SyncOrderInput): Promise<void
       return;
     }
 
-    await supabaseAdmin
-      .from("orders")
-      .update({ status: "echoue" })
-      .eq("id", input.orderId)
-      .eq("status", "en_attente");
+    await srvSetOrderStatus(input.orderId, "echoue", "en_attente");
     await logPaymentEvent({
       order_id: input.orderId,
       notchpay_reference: input.notchpayReference,
