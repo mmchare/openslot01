@@ -73,7 +73,7 @@ export async function srvSetOrderStatus(
     p_secret: serverSecret(),
     p_order_id: orderId,
     p_status: status,
-    p_expected_status: expected ?? null,
+    p_expected_status: (expected ?? null) as unknown as string,
   });
   if (error) throw new Error(error.message);
   return Boolean(data);
@@ -107,7 +107,7 @@ export async function srvFindOrderByReference(
   const { data, error } = await serverDb().rpc("srv_find_order_by_reference", {
     p_secret: serverSecret(),
     p_reference: reference,
-    p_trxref: trxref ?? null,
+    p_trxref: (trxref ?? null) as unknown as string,
   });
   if (error) throw new Error(error.message);
   return (data as never) ?? null;
