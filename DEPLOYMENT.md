@@ -21,9 +21,9 @@ bun run deploy:cloudflare
 ```text
 SUPABASE_URL
 SUPABASE_PUBLISHABLE_KEY
-SUPABASE_SERVICE_ROLE_KEY
 VITE_SUPABASE_URL
 VITE_SUPABASE_PUBLISHABLE_KEY
+APP_SERVER_SECRET
 NOTCHPAY_PUBLIC_KEY
 NOTCHPAY_HASH
 ADMIN_PASSWORD
@@ -39,3 +39,13 @@ ADMIN_PASSWORD
 ```text
 https://votre-domaine/api/public/webhooks/notchpay
 ```
+
+## Sans clé service role
+
+L'application n'utilise plus `SUPABASE_SERVICE_ROLE_KEY`. Toutes les écritures
+sensibles passent par des fonctions SQL `SECURITY DEFINER` protégées par
+`APP_SERVER_SECRET`. Ce secret doit être identique côté serveur et dans la
+table interne `app_config` (clé `server_secret`).
+
+Elle peut donc être déployée sur n'importe quel hébergeur (Cloudflare Worker,
+Vercel, autre) avec uniquement les variables listées ci-dessus.
