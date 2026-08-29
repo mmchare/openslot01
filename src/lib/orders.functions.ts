@@ -117,11 +117,14 @@ export const createOrder = createServerFn({ method: "POST" })
         order_id: order.order_id,
         status: charge.status,
         instruction,
-        checkout_url: isMtn ? pay.authorization_url : null,
+        checkout_url: pay.authorization_url,
         payment_mode: "direct_charge" as const,
       };
     } catch (err) {
-      if (!isMtn) throw err;
+      // Notch Pay renvoie parfois une erreur 500 sur le Direct Charge (Orange
+      // comme MTN). On bascule alors sur la page de paiement hébergée.
+      if (!pay.authorization_url) throw err;
+
 
       await logPaymentEvent({
         order_id: order.order_id,
