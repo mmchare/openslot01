@@ -1,5 +1,6 @@
 import { createServerFn } from "@tanstack/react-start";
 import { z } from "zod";
+import type { Json } from "@/integrations/supabase/types";
 import { serverDb, srvAdmin } from "./server-db.server";
 
 function checkPassword(password: string) {
@@ -336,7 +337,7 @@ export interface AdminPaymentEvent {
   event_type: string;
   level: string;
   message: string | null;
-  metadata: Record<string, unknown> | null;
+  metadata: Json | null;
   created_at: string;
 }
 
