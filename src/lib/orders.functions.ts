@@ -102,8 +102,6 @@ export const createOrder = createServerFn({ method: "POST" })
         ? "Attends le prompt Orange Money sur ton téléphone, puis entre ton PIN pour confirmer. Si rien n'apparaît sous 30s, compose #150*50# pour valider la transaction en attente."
         : "Pour MTN, compose *126# tout de suite, choisis Approve payment / Valider paiement, puis entre ton PIN. Si un prompt MTN s'affiche automatiquement, tu peux aussi le valider directement.";
 
-    const isMtn = data.channel === "cm.mtn";
-
     try {
       // Direct Charge — déclenche immédiatement le prompt USSD sur le téléphone.
       const charge = await directChargeMobileMoney({
@@ -117,11 +115,15 @@ export const createOrder = createServerFn({ method: "POST" })
         order_id: order.order_id,
         status: charge.status,
         instruction,
-        checkout_url: isMtn ? pay.authorization_url : null,
+        checkout_url: null,
         payment_mode: "direct_charge" as const,
       };
+
     } catch (err) {
-      if (!isMtn) throw err;
+      // Notch Pay renvoie parfois une erreur 500 sur le Direct Charge (Orange
+      // comme MTN). On bascule alors sur la page de paiement hébergée.
+      if (!pay.authorization_url) throw err;
+
 
       await logPaymentEvent({
         order_id: order.order_id,
