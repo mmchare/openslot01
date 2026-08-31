@@ -35,7 +35,7 @@ export const Route = createFileRoute("/commande/succes/$orderId")({
 
 function SuccessPage() {
   const { orderId } = Route.useParams();
-  const { dev, confirm, instruction } = Route.useSearch();
+  const { dev, confirm, instruction, checkout } = Route.useSearch();
   const simulate = useServerFn(simulateDevPayment);
   const fetchOrder = useServerFn(getOrderForSuccess);
   const [devTriggered, setDevTriggered] = useState(false);
