@@ -391,3 +391,25 @@ export function verifyNotchPaySignature(
     return false;
   }
 }
+
+// Notch Pay renvoie fréquemment une 500 transitoire sur le Direct Charge.
+// On réessaie (avec une variante de payload) avant de basculer sur le Checkout.
+export async function directChargeWithRetry(
+  input: DirectChargeInput,
+): Promise<DirectChargeResult> {
+  const attempts: Array<"phone" | "account"> = ["phone", "phone", "account"];
+  let lastErr: unknown;
+  for (let i = 0; i < attempts.length; i++) {
+    try {
+      return await directChargeMobileMoney({ ...input, variant: attempts[i] });
+    } catch (err) {
+      lastErr = err;
+      if (i < attempts.length - 1) {
+        await new Promise((r) => setTimeout(r, 1500));
+      }
+    }
+  }
+  throw lastErr instanceof Error
+    ? lastErr
+    : new Error("Direct Charge indisponible.");
+}
