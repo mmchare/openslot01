@@ -107,14 +107,32 @@ function SuccessPage() {
             On attend la confirmation de ton paiement. Cette page se met à jour
             automatiquement.
           </p>
-          {confirm && (
+          {checkout ? (
+            <div className="mx-auto mt-4 max-w-sm rounded-xl border border-primary/30 bg-primary/10 px-4 py-4 text-left text-sm">
+              <strong className="block text-primary">Termine ton paiement</strong>
+              <span className="mt-1 block text-muted-foreground">
+                Le prompt automatique n'a pas pu être envoyé par l'opérateur.
+                Ouvre la page sécurisée, entre ton numéro Mobile Money et valide.
+                Cette page se mettra à jour dès la confirmation.
+              </span>
+              <a
+                href={checkout}
+                target="_blank"
+                rel="noreferrer"
+                className="mt-3 inline-block rounded-full bg-gradient-primary px-5 py-3 text-sm font-semibold text-primary-foreground shadow-glow"
+              >
+                Payer maintenant
+              </a>
+            </div>
+          ) : confirm ? (
             <div className="mx-auto mt-4 max-w-sm rounded-xl border border-primary/30 bg-primary/10 px-4 py-3 text-left text-sm text-foreground">
               <strong className="block text-primary">Action à valider sur ton téléphone</strong>
               <span className="mt-1 block text-muted-foreground">
                 {instruction || "Compose le code indiqué par ton opérateur, puis valide la transaction."}
               </span>
             </div>
-          )}
+          ) : null}
+
           <button
             onClick={() => refetch()}
             className="mt-4 text-sm text-primary underline"
