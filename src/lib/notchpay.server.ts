@@ -397,7 +397,7 @@ export function verifyNotchPaySignature(
 export async function directChargeWithRetry(
   input: DirectChargeInput,
 ): Promise<DirectChargeResult> {
-  const attempts: Array<"phone" | "account"> = ["phone", "phone", "account"];
+  const attempts: Array<"phone" | "account"> = ["phone"];
   let lastErr: unknown;
   for (let i = 0; i < attempts.length; i++) {
     try {
