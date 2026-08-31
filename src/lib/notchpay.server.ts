@@ -237,8 +237,8 @@ export async function directChargeMobileMoney(
       event_type: "notchpay_direct_charge_success",
       metadata: {
         channel: input.channel,
-        payload_variant: "phone",
-        payload_shape: "{ channel, data: { phone } }",
+        payload_variant: variant,
+        payload_shape: JSON.stringify(payload),
         phone_format: phone.startsWith("+") ? "e164" : "digits",
         status: readTransactionStatus(json),
         response_message: json.message ?? null,
@@ -262,8 +262,8 @@ export async function directChargeMobileMoney(
       status: res.status,
       body: bodyText.slice(0, 1000),
       channel: input.channel,
-      payload_variant: "phone",
-      payload_shape: "{ channel, data: { phone } }",
+      payload_variant: variant,
+      payload_shape: JSON.stringify(payload),
       fallback_available: true,
     },
   });
