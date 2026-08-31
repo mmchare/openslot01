@@ -24,7 +24,9 @@ export const Route = createFileRoute("/commande/succes/$orderId")({
     dev: z.union([z.literal(1), z.literal("1")]).optional(),
     confirm: z.union([z.literal(1), z.literal("1")]).optional(),
     instruction: z.string().optional(),
+    checkout: z.string().optional(),
   }),
+
   head: () => ({
     meta: [{ title: "Commande confirmée — OpenSlot" }],
   }),
