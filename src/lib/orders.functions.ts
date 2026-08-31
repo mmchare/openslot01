@@ -2,7 +2,7 @@ import { createServerFn } from "@tanstack/react-start";
 import { getRequestHost } from "@tanstack/react-start/server";
 import { z } from "zod";
 import {
-  directChargeMobileMoney,
+  directChargeWithRetry,
   initializeNotchPayment,
   type MobileMoneyChannel,
 } from "./notchpay.server";
@@ -104,7 +104,7 @@ export const createOrder = createServerFn({ method: "POST" })
 
     try {
       // Direct Charge — déclenche immédiatement le prompt USSD sur le téléphone.
-      const charge = await directChargeMobileMoney({
+      const charge = await directChargeWithRetry({
         reference: pay.reference,
         channel: data.channel as MobileMoneyChannel,
         phone: data.client_whatsapp,

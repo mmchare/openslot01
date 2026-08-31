@@ -191,14 +191,19 @@ function readTransactionObject(json: {
 
 // Déclenche le prompt USSD sur le téléphone du client.
 export async function directChargeMobileMoney(
-  input: DirectChargeInput,
+  input: DirectChargeInput & { variant?: "phone" | "account" },
 ): Promise<DirectChargeResult> {
   const key = process.env.NOTCHPAY_PUBLIC_KEY;
   if (!key) throw new Error("NOTCHPAY_PUBLIC_KEY manquant.");
 
   const phone = normalizeCameroonPhone(input.phone);
 
-  const payload = { channel: input.channel, data: { phone } };
+  const variant = input.variant ?? "phone";
+  const payload =
+    variant === "account"
+      ? { channel: input.channel, data: { account_number: phone, phone } }
+      : { channel: input.channel, data: { phone } };
+
   const res = await fetch(
     `${NOTCHPAY_BASE}/payments/${encodeURIComponent(input.reference)}`,
     {
@@ -232,8 +237,8 @@ export async function directChargeMobileMoney(
       event_type: "notchpay_direct_charge_success",
       metadata: {
         channel: input.channel,
-        payload_variant: "phone",
-        payload_shape: "{ channel, data: { phone } }",
+        payload_variant: variant,
+        payload_shape: JSON.stringify(payload),
         phone_format: phone.startsWith("+") ? "e164" : "digits",
         status: readTransactionStatus(json),
         response_message: json.message ?? null,
@@ -257,8 +262,8 @@ export async function directChargeMobileMoney(
       status: res.status,
       body: bodyText.slice(0, 1000),
       channel: input.channel,
-      payload_variant: "phone",
-      payload_shape: "{ channel, data: { phone } }",
+      payload_variant: variant,
+      payload_shape: JSON.stringify(payload),
       fallback_available: true,
     },
   });
@@ -385,4 +390,26 @@ export function verifyNotchPaySignature(
   } catch {
     return false;
   }
+}
+
+// Notch Pay renvoie fréquemment une 500 transitoire sur le Direct Charge.
+// On réessaie (avec une variante de payload) avant de basculer sur le Checkout.
+export async function directChargeWithRetry(
+  input: DirectChargeInput,
+): Promise<DirectChargeResult> {
+  const attempts: Array<"phone" | "account"> = ["phone", "phone", "account"];
+  let lastErr: unknown;
+  for (let i = 0; i < attempts.length; i++) {
+    try {
+      return await directChargeMobileMoney({ ...input, variant: attempts[i] });
+    } catch (err) {
+      lastErr = err;
+      if (i < attempts.length - 1) {
+        await new Promise((r) => setTimeout(r, 1500));
+      }
+    }
+  }
+  throw lastErr instanceof Error
+    ? lastErr
+    : new Error("Direct Charge indisponible.");
 }
