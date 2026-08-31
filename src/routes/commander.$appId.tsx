@@ -116,21 +116,18 @@ function OrderPage() {
         },
       });
 
-      if (res.checkout_url) {
-        window.location.assign(res.checkout_url);
-        return;
-      }
-
-      // Le prompt USSD est déjà parti sur le téléphone du client.
-      // On l'amène sur la page d'attente qui poll le statut.
+      // On reste dans l'app : la page de suivi affiche soit l'instruction USSD,
+      // soit le bouton de paiement sécurisé si le prompt direct a échoué.
       navigate({
         to: "/commande/succes/$orderId",
         params: { orderId: res.order_id },
         search: {
           confirm: 1,
           instruction: res.instruction,
+          ...(res.checkout_url ? { checkout: res.checkout_url } : {}),
         },
       });
+
     } catch (err) {
       setError(err instanceof Error ? err.message : "Une erreur est survenue.");
       setLoading(false);
