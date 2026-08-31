@@ -191,14 +191,19 @@ function readTransactionObject(json: {
 
 // Déclenche le prompt USSD sur le téléphone du client.
 export async function directChargeMobileMoney(
-  input: DirectChargeInput,
+  input: DirectChargeInput & { variant?: "phone" | "account" },
 ): Promise<DirectChargeResult> {
   const key = process.env.NOTCHPAY_PUBLIC_KEY;
   if (!key) throw new Error("NOTCHPAY_PUBLIC_KEY manquant.");
 
   const phone = normalizeCameroonPhone(input.phone);
 
-  const payload = { channel: input.channel, data: { phone } };
+  const variant = input.variant ?? "phone";
+  const payload =
+    variant === "account"
+      ? { channel: input.channel, data: { account_number: phone, phone } }
+      : { channel: input.channel, data: { phone } };
+
   const res = await fetch(
     `${NOTCHPAY_BASE}/payments/${encodeURIComponent(input.reference)}`,
     {
