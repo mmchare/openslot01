@@ -10,15 +10,19 @@
 
 import { Route as rootRouteImport } from './routes/__root'
 import { Route as McpRouteImport } from './routes/mcp'
+import { Route as AuthRouteImport } from './routes/auth'
 import { Route as AdminRouteImport } from './routes/admin'
+import { Route as AuthenticatedRouteRouteImport } from './routes/_authenticated/route'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as CommanderAppIdRouteImport } from './routes/commander.$appId'
 import { Route as CommandeOrderIdRouteImport } from './routes/commande.$orderId'
 import { Route as AdminDiagnosticRouteImport } from './routes/admin.diagnostic'
+import { Route as AuthenticatedCompteRouteImport } from './routes/_authenticated/compte'
 import { Route as Char91DotwellKnownChar93OauthProtectedResourceRouteImport } from './routes/[.well-known]/oauth-protected-resource'
 import { Route as Char91DotmcpChar93ListToolsRouteImport } from './routes/[.mcp]/list-tools'
 import { Route as CommandeSuccesOrderIdRouteImport } from './routes/commande.succes.$orderId'
 import { Route as ApiPublicHealthRouteImport } from './routes/api/public/health'
+import { Route as AuthenticatedCompteCommandesRouteImport } from './routes/_authenticated/compte.commandes'
 import { Route as Char91DotmcpChar93InvokeToolToolRouteImport } from './routes/[.mcp]/invoke-tool/$tool'
 import { Route as ApiPublicWebhooksNotchpayRouteImport } from './routes/api/public/webhooks/notchpay'
 
@@ -27,9 +31,18 @@ const McpRoute = McpRouteImport.update({
   path: '/mcp',
   getParentRoute: () => rootRouteImport,
 } as any)
+const AuthRoute = AuthRouteImport.update({
+  id: '/auth',
+  path: '/auth',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const AdminRoute = AdminRouteImport.update({
   id: '/admin',
   path: '/admin',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const AuthenticatedRouteRoute = AuthenticatedRouteRouteImport.update({
+  id: '/_authenticated',
   getParentRoute: () => rootRouteImport,
 } as any)
 const IndexRoute = IndexRouteImport.update({
@@ -51,6 +64,11 @@ const AdminDiagnosticRoute = AdminDiagnosticRouteImport.update({
   id: '/diagnostic',
   path: '/diagnostic',
   getParentRoute: () => AdminRoute,
+} as any)
+const AuthenticatedCompteRoute = AuthenticatedCompteRouteImport.update({
+  id: '/compte',
+  path: '/compte',
+  getParentRoute: () => AuthenticatedRouteRoute,
 } as any)
 const Char91DotwellKnownChar93OauthProtectedResourceRoute =
   Char91DotwellKnownChar93OauthProtectedResourceRouteImport.update({
@@ -74,6 +92,12 @@ const ApiPublicHealthRoute = ApiPublicHealthRouteImport.update({
   path: '/api/public/health',
   getParentRoute: () => rootRouteImport,
 } as any)
+const AuthenticatedCompteCommandesRoute =
+  AuthenticatedCompteCommandesRouteImport.update({
+    id: '/commandes',
+    path: '/commandes',
+    getParentRoute: () => AuthenticatedCompteRoute,
+  } as any)
 const Char91DotmcpChar93InvokeToolToolRoute =
   Char91DotmcpChar93InvokeToolToolRouteImport.update({
     id: '/.mcp/invoke-tool/$tool',
@@ -90,13 +114,16 @@ const ApiPublicWebhooksNotchpayRoute =
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/admin': typeof AdminRouteWithChildren
+  '/auth': typeof AuthRoute
   '/mcp': typeof McpRoute
   '/.mcp/list-tools': typeof Char91DotmcpChar93ListToolsRoute
   '/.well-known/oauth-protected-resource': typeof Char91DotwellKnownChar93OauthProtectedResourceRoute
+  '/compte': typeof AuthenticatedCompteRouteWithChildren
   '/admin/diagnostic': typeof AdminDiagnosticRoute
   '/commande/$orderId': typeof CommandeOrderIdRoute
   '/commander/$appId': typeof CommanderAppIdRoute
   '/.mcp/invoke-tool/$tool': typeof Char91DotmcpChar93InvokeToolToolRoute
+  '/compte/commandes': typeof AuthenticatedCompteCommandesRoute
   '/api/public/health': typeof ApiPublicHealthRoute
   '/commande/succes/$orderId': typeof CommandeSuccesOrderIdRoute
   '/api/public/webhooks/notchpay': typeof ApiPublicWebhooksNotchpayRoute
@@ -104,13 +131,16 @@ export interface FileRoutesByFullPath {
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/admin': typeof AdminRouteWithChildren
+  '/auth': typeof AuthRoute
   '/mcp': typeof McpRoute
   '/.mcp/list-tools': typeof Char91DotmcpChar93ListToolsRoute
   '/.well-known/oauth-protected-resource': typeof Char91DotwellKnownChar93OauthProtectedResourceRoute
+  '/compte': typeof AuthenticatedCompteRouteWithChildren
   '/admin/diagnostic': typeof AdminDiagnosticRoute
   '/commande/$orderId': typeof CommandeOrderIdRoute
   '/commander/$appId': typeof CommanderAppIdRoute
   '/.mcp/invoke-tool/$tool': typeof Char91DotmcpChar93InvokeToolToolRoute
+  '/compte/commandes': typeof AuthenticatedCompteCommandesRoute
   '/api/public/health': typeof ApiPublicHealthRoute
   '/commande/succes/$orderId': typeof CommandeSuccesOrderIdRoute
   '/api/public/webhooks/notchpay': typeof ApiPublicWebhooksNotchpayRoute
@@ -118,14 +148,18 @@ export interface FileRoutesByTo {
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
+  '/_authenticated': typeof AuthenticatedRouteRouteWithChildren
   '/admin': typeof AdminRouteWithChildren
+  '/auth': typeof AuthRoute
   '/mcp': typeof McpRoute
   '/.mcp/list-tools': typeof Char91DotmcpChar93ListToolsRoute
   '/.well-known/oauth-protected-resource': typeof Char91DotwellKnownChar93OauthProtectedResourceRoute
+  '/_authenticated/compte': typeof AuthenticatedCompteRouteWithChildren
   '/admin/diagnostic': typeof AdminDiagnosticRoute
   '/commande/$orderId': typeof CommandeOrderIdRoute
   '/commander/$appId': typeof CommanderAppIdRoute
   '/.mcp/invoke-tool/$tool': typeof Char91DotmcpChar93InvokeToolToolRoute
+  '/_authenticated/compte/commandes': typeof AuthenticatedCompteCommandesRoute
   '/api/public/health': typeof ApiPublicHealthRoute
   '/commande/succes/$orderId': typeof CommandeSuccesOrderIdRoute
   '/api/public/webhooks/notchpay': typeof ApiPublicWebhooksNotchpayRoute
@@ -135,13 +169,16 @@ export interface FileRouteTypes {
   fullPaths:
     | '/'
     | '/admin'
+    | '/auth'
     | '/mcp'
     | '/.mcp/list-tools'
     | '/.well-known/oauth-protected-resource'
+    | '/compte'
     | '/admin/diagnostic'
     | '/commande/$orderId'
     | '/commander/$appId'
     | '/.mcp/invoke-tool/$tool'
+    | '/compte/commandes'
     | '/api/public/health'
     | '/commande/succes/$orderId'
     | '/api/public/webhooks/notchpay'
@@ -149,27 +186,34 @@ export interface FileRouteTypes {
   to:
     | '/'
     | '/admin'
+    | '/auth'
     | '/mcp'
     | '/.mcp/list-tools'
     | '/.well-known/oauth-protected-resource'
+    | '/compte'
     | '/admin/diagnostic'
     | '/commande/$orderId'
     | '/commander/$appId'
     | '/.mcp/invoke-tool/$tool'
+    | '/compte/commandes'
     | '/api/public/health'
     | '/commande/succes/$orderId'
     | '/api/public/webhooks/notchpay'
   id:
     | '__root__'
     | '/'
+    | '/_authenticated'
     | '/admin'
+    | '/auth'
     | '/mcp'
     | '/.mcp/list-tools'
     | '/.well-known/oauth-protected-resource'
+    | '/_authenticated/compte'
     | '/admin/diagnostic'
     | '/commande/$orderId'
     | '/commander/$appId'
     | '/.mcp/invoke-tool/$tool'
+    | '/_authenticated/compte/commandes'
     | '/api/public/health'
     | '/commande/succes/$orderId'
     | '/api/public/webhooks/notchpay'
@@ -177,7 +221,9 @@ export interface FileRouteTypes {
 }
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
+  AuthenticatedRouteRoute: typeof AuthenticatedRouteRouteWithChildren
   AdminRoute: typeof AdminRouteWithChildren
+  AuthRoute: typeof AuthRoute
   McpRoute: typeof McpRoute
   Char91DotmcpChar93ListToolsRoute: typeof Char91DotmcpChar93ListToolsRoute
   Char91DotwellKnownChar93OauthProtectedResourceRoute: typeof Char91DotwellKnownChar93OauthProtectedResourceRoute
@@ -198,11 +244,25 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof McpRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/auth': {
+      id: '/auth'
+      path: '/auth'
+      fullPath: '/auth'
+      preLoaderRoute: typeof AuthRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/admin': {
       id: '/admin'
       path: '/admin'
       fullPath: '/admin'
       preLoaderRoute: typeof AdminRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/_authenticated': {
+      id: '/_authenticated'
+      path: ''
+      fullPath: '/'
+      preLoaderRoute: typeof AuthenticatedRouteRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/': {
@@ -233,6 +293,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AdminDiagnosticRouteImport
       parentRoute: typeof AdminRoute
     }
+    '/_authenticated/compte': {
+      id: '/_authenticated/compte'
+      path: '/compte'
+      fullPath: '/compte'
+      preLoaderRoute: typeof AuthenticatedCompteRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
     '/.well-known/oauth-protected-resource': {
       id: '/.well-known/oauth-protected-resource'
       path: '/.well-known/oauth-protected-resource'
@@ -261,6 +328,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ApiPublicHealthRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/_authenticated/compte/commandes': {
+      id: '/_authenticated/compte/commandes'
+      path: '/commandes'
+      fullPath: '/compte/commandes'
+      preLoaderRoute: typeof AuthenticatedCompteCommandesRouteImport
+      parentRoute: typeof AuthenticatedCompteRoute
+    }
     '/.mcp/invoke-tool/$tool': {
       id: '/.mcp/invoke-tool/$tool'
       path: '/.mcp/invoke-tool/$tool'
@@ -278,6 +352,28 @@ declare module '@tanstack/react-router' {
   }
 }
 
+interface AuthenticatedCompteRouteChildren {
+  AuthenticatedCompteCommandesRoute: typeof AuthenticatedCompteCommandesRoute
+}
+
+const AuthenticatedCompteRouteChildren: AuthenticatedCompteRouteChildren = {
+  AuthenticatedCompteCommandesRoute: AuthenticatedCompteCommandesRoute,
+}
+
+const AuthenticatedCompteRouteWithChildren =
+  AuthenticatedCompteRoute._addFileChildren(AuthenticatedCompteRouteChildren)
+
+interface AuthenticatedRouteRouteChildren {
+  AuthenticatedCompteRoute: typeof AuthenticatedCompteRouteWithChildren
+}
+
+const AuthenticatedRouteRouteChildren: AuthenticatedRouteRouteChildren = {
+  AuthenticatedCompteRoute: AuthenticatedCompteRouteWithChildren,
+}
+
+const AuthenticatedRouteRouteWithChildren =
+  AuthenticatedRouteRoute._addFileChildren(AuthenticatedRouteRouteChildren)
+
 interface AdminRouteChildren {
   AdminDiagnosticRoute: typeof AdminDiagnosticRoute
 }
@@ -290,7 +386,9 @@ const AdminRouteWithChildren = AdminRoute._addFileChildren(AdminRouteChildren)
 
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
+  AuthenticatedRouteRoute: AuthenticatedRouteRouteWithChildren,
   AdminRoute: AdminRouteWithChildren,
+  AuthRoute: AuthRoute,
   McpRoute: McpRoute,
   Char91DotmcpChar93ListToolsRoute: Char91DotmcpChar93ListToolsRoute,
   Char91DotwellKnownChar93OauthProtectedResourceRoute:
