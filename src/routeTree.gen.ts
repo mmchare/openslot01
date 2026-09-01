@@ -18,6 +18,7 @@ import { Route as AdminDiagnosticRouteImport } from './routes/admin.diagnostic'
 import { Route as Char91DotwellKnownChar93OauthProtectedResourceRouteImport } from './routes/[.well-known]/oauth-protected-resource'
 import { Route as Char91DotmcpChar93ListToolsRouteImport } from './routes/[.mcp]/list-tools'
 import { Route as CommandeSuccesOrderIdRouteImport } from './routes/commande.succes.$orderId'
+import { Route as ApiPublicHealthRouteImport } from './routes/api/public/health'
 import { Route as Char91DotmcpChar93InvokeToolToolRouteImport } from './routes/[.mcp]/invoke-tool/$tool'
 import { Route as ApiPublicWebhooksNotchpayRouteImport } from './routes/api/public/webhooks/notchpay'
 
@@ -68,6 +69,11 @@ const CommandeSuccesOrderIdRoute = CommandeSuccesOrderIdRouteImport.update({
   path: '/commande/succes/$orderId',
   getParentRoute: () => rootRouteImport,
 } as any)
+const ApiPublicHealthRoute = ApiPublicHealthRouteImport.update({
+  id: '/api/public/health',
+  path: '/api/public/health',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const Char91DotmcpChar93InvokeToolToolRoute =
   Char91DotmcpChar93InvokeToolToolRouteImport.update({
     id: '/.mcp/invoke-tool/$tool',
@@ -91,6 +97,7 @@ export interface FileRoutesByFullPath {
   '/commande/$orderId': typeof CommandeOrderIdRoute
   '/commander/$appId': typeof CommanderAppIdRoute
   '/.mcp/invoke-tool/$tool': typeof Char91DotmcpChar93InvokeToolToolRoute
+  '/api/public/health': typeof ApiPublicHealthRoute
   '/commande/succes/$orderId': typeof CommandeSuccesOrderIdRoute
   '/api/public/webhooks/notchpay': typeof ApiPublicWebhooksNotchpayRoute
 }
@@ -104,6 +111,7 @@ export interface FileRoutesByTo {
   '/commande/$orderId': typeof CommandeOrderIdRoute
   '/commander/$appId': typeof CommanderAppIdRoute
   '/.mcp/invoke-tool/$tool': typeof Char91DotmcpChar93InvokeToolToolRoute
+  '/api/public/health': typeof ApiPublicHealthRoute
   '/commande/succes/$orderId': typeof CommandeSuccesOrderIdRoute
   '/api/public/webhooks/notchpay': typeof ApiPublicWebhooksNotchpayRoute
 }
@@ -118,6 +126,7 @@ export interface FileRoutesById {
   '/commande/$orderId': typeof CommandeOrderIdRoute
   '/commander/$appId': typeof CommanderAppIdRoute
   '/.mcp/invoke-tool/$tool': typeof Char91DotmcpChar93InvokeToolToolRoute
+  '/api/public/health': typeof ApiPublicHealthRoute
   '/commande/succes/$orderId': typeof CommandeSuccesOrderIdRoute
   '/api/public/webhooks/notchpay': typeof ApiPublicWebhooksNotchpayRoute
 }
@@ -133,6 +142,7 @@ export interface FileRouteTypes {
     | '/commande/$orderId'
     | '/commander/$appId'
     | '/.mcp/invoke-tool/$tool'
+    | '/api/public/health'
     | '/commande/succes/$orderId'
     | '/api/public/webhooks/notchpay'
   fileRoutesByTo: FileRoutesByTo
@@ -146,6 +156,7 @@ export interface FileRouteTypes {
     | '/commande/$orderId'
     | '/commander/$appId'
     | '/.mcp/invoke-tool/$tool'
+    | '/api/public/health'
     | '/commande/succes/$orderId'
     | '/api/public/webhooks/notchpay'
   id:
@@ -159,6 +170,7 @@ export interface FileRouteTypes {
     | '/commande/$orderId'
     | '/commander/$appId'
     | '/.mcp/invoke-tool/$tool'
+    | '/api/public/health'
     | '/commande/succes/$orderId'
     | '/api/public/webhooks/notchpay'
   fileRoutesById: FileRoutesById
@@ -172,6 +184,7 @@ export interface RootRouteChildren {
   CommandeOrderIdRoute: typeof CommandeOrderIdRoute
   CommanderAppIdRoute: typeof CommanderAppIdRoute
   Char91DotmcpChar93InvokeToolToolRoute: typeof Char91DotmcpChar93InvokeToolToolRoute
+  ApiPublicHealthRoute: typeof ApiPublicHealthRoute
   CommandeSuccesOrderIdRoute: typeof CommandeSuccesOrderIdRoute
   ApiPublicWebhooksNotchpayRoute: typeof ApiPublicWebhooksNotchpayRoute
 }
@@ -241,6 +254,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof CommandeSuccesOrderIdRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/api/public/health': {
+      id: '/api/public/health'
+      path: '/api/public/health'
+      fullPath: '/api/public/health'
+      preLoaderRoute: typeof ApiPublicHealthRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/.mcp/invoke-tool/$tool': {
       id: '/.mcp/invoke-tool/$tool'
       path: '/.mcp/invoke-tool/$tool'
@@ -278,6 +298,7 @@ const rootRouteChildren: RootRouteChildren = {
   CommandeOrderIdRoute: CommandeOrderIdRoute,
   CommanderAppIdRoute: CommanderAppIdRoute,
   Char91DotmcpChar93InvokeToolToolRoute: Char91DotmcpChar93InvokeToolToolRoute,
+  ApiPublicHealthRoute: ApiPublicHealthRoute,
   CommandeSuccesOrderIdRoute: CommandeSuccesOrderIdRoute,
   ApiPublicWebhooksNotchpayRoute: ApiPublicWebhooksNotchpayRoute,
 }
