@@ -101,6 +101,7 @@ export type Database = {
           subscription_end_at: string | null
           subscription_start_at: string | null
           updated_at: string
+          user_id: string | null
         }
         Insert: {
           amount_paid: number
@@ -116,6 +117,7 @@ export type Database = {
           subscription_end_at?: string | null
           subscription_start_at?: string | null
           updated_at?: string
+          user_id?: string | null
         }
         Update: {
           amount_paid?: number
@@ -131,6 +133,7 @@ export type Database = {
           subscription_end_at?: string | null
           subscription_start_at?: string | null
           updated_at?: string
+          user_id?: string | null
         }
         Relationships: [
           {
@@ -186,6 +189,36 @@ export type Database = {
           metadata?: Json | null
           notchpay_reference?: string | null
           order_id?: string | null
+        }
+        Relationships: []
+      }
+      profiles: {
+        Row: {
+          created_at: string
+          full_name: string | null
+          id: string
+          phone: string | null
+          referral_balance: number
+          referral_code: string | null
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          full_name?: string | null
+          id: string
+          phone?: string | null
+          referral_balance?: number
+          referral_code?: string | null
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          full_name?: string | null
+          id?: string
+          phone?: string | null
+          referral_balance?: number
+          referral_code?: string | null
+          updated_at?: string
         }
         Relationships: []
       }
@@ -303,15 +336,26 @@ export type Database = {
         }[]
       }
       available_slot_count: { Args: { p_app_id: string }; Returns: number }
-      create_order_secure: {
-        Args: {
-          p_application_id: string
-          p_client_email: string
-          p_client_name: string
-          p_client_whatsapp: string
-        }
-        Returns: Json
-      }
+      create_order_secure:
+        | {
+            Args: {
+              p_application_id: string
+              p_client_email: string
+              p_client_name: string
+              p_client_whatsapp: string
+            }
+            Returns: Json
+          }
+        | {
+            Args: {
+              p_application_id: string
+              p_client_email: string
+              p_client_name: string
+              p_client_whatsapp: string
+              p_user_id?: string
+            }
+            Returns: Json
+          }
       handle_notchpay_payment: {
         Args: { p_reference: string; p_status: string }
         Returns: undefined
@@ -331,6 +375,10 @@ export type Database = {
       }
       srv_get_order: {
         Args: { p_order_id: string; p_secret: string }
+        Returns: Json
+      }
+      srv_get_user_orders: {
+        Args: { p_secret: string; p_user_id: string }
         Returns: Json
       }
       srv_last_mtn_processing_event: {
@@ -365,6 +413,10 @@ export type Database = {
           p_status: string
         }
         Returns: boolean
+      }
+      srv_update_profile: {
+        Args: { p_payload: Json; p_secret: string; p_user_id: string }
+        Returns: Json
       }
     }
     Enums: {
