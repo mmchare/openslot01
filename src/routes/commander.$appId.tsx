@@ -48,6 +48,7 @@ function OrderPage() {
   const { appId } = Route.useParams();
   const navigate = useNavigate();
   const createOrderFn = useServerFn(createOrder);
+  const { user, loading: authLoading } = useAuth();
 
   // Re-fetch the catalog item to get fresh stock
   const { data: fresh } = useSuspenseQuery({
@@ -56,9 +57,9 @@ function OrderPage() {
     initialData: app,
   });
 
-  const [name, setName] = useState("");
-  const [email, setEmail] = useState("");
-  const [phone, setPhone] = useState("+237");
+  const [name, setName] = useState(user?.user_metadata?.full_name ?? "");
+  const [email, setEmail] = useState(user?.email ?? "");
+  const [phone, setPhone] = useState(user?.user_metadata?.phone ?? "+237");
   const [channel, setChannel] = useState<Channel | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
