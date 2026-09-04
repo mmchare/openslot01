@@ -115,6 +115,7 @@ function OrderPage() {
           client_whatsapp: cleanedPhone,
           channel,
           origin: window.location.origin,
+          user_id: user?.id,
         },
       });
 
