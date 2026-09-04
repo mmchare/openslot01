@@ -30,6 +30,7 @@ const CreateOrderInput = z.object({
     .regex(/^\+?[0-9\s]+$/, "Numéro invalide"),
   channel: z.enum(["cm.mtn", "cm.orange"]),
   origin: z.string().url().optional(),
+  user_id: z.string().uuid().optional(),
 });
 
 export const createOrder = createServerFn({ method: "POST" })
@@ -43,6 +44,7 @@ export const createOrder = createServerFn({ method: "POST" })
         p_client_name: data.client_name,
         p_client_email: data.client_email,
         p_client_whatsapp: data.client_whatsapp,
+        p_user_id: data.user_id ?? null,
       },
     );
 
