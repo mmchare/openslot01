@@ -68,8 +68,6 @@ function AuthPage() {
           },
         });
         if (signUpError) throw signUpError;
-        if (signUpError) throw signUpError;
-        if (signUpError) throw signUpError;
 
         // Crée le profil si l'utilisateur est immédiatement connecté (auto-confirm ou session existante)
         if (data.user) {

@@ -2,12 +2,13 @@ import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { useSuspenseQuery } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
 import { useMemo, useState } from "react";
-import { ArrowLeft, Loader2, Lock } from "lucide-react";
+import { ArrowLeft, Loader2, Lock, User } from "lucide-react";
 import { getApplicationById } from "@/lib/catalog.functions";
 import { createOrder } from "@/lib/orders.functions";
 import { AppIcon } from "@/components/AppIcon";
 import { SiteHeader } from "@/components/SiteHeader";
 import { SiteFooter } from "@/components/SiteFooter";
+import { useAuth } from "@/hooks/useAuth";
 
 type Channel = "cm.mtn" | "cm.orange";
 
@@ -47,6 +48,7 @@ function OrderPage() {
   const { appId } = Route.useParams();
   const navigate = useNavigate();
   const createOrderFn = useServerFn(createOrder);
+  const { user, loading: authLoading } = useAuth();
 
   // Re-fetch the catalog item to get fresh stock
   const { data: fresh } = useSuspenseQuery({
@@ -55,9 +57,9 @@ function OrderPage() {
     initialData: app,
   });
 
-  const [name, setName] = useState("");
-  const [email, setEmail] = useState("");
-  const [phone, setPhone] = useState("+237");
+  const [name, setName] = useState(user?.user_metadata?.full_name ?? "");
+  const [email, setEmail] = useState(user?.email ?? "");
+  const [phone, setPhone] = useState(user?.user_metadata?.phone ?? "+237");
   const [channel, setChannel] = useState<Channel | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -113,6 +115,7 @@ function OrderPage() {
           client_whatsapp: cleanedPhone,
           channel,
           origin: window.location.origin,
+          user_id: user?.id,
         },
       });
 
