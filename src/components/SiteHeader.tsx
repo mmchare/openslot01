@@ -1,7 +1,10 @@
 import { Link } from "@tanstack/react-router";
-import { Zap } from "lucide-react";
+import { Loader2, User, Zap } from "lucide-react";
+import { useAuth } from "@/hooks/useAuth";
 
 export function SiteHeader() {
+  const { user, loading } = useAuth();
+
   return (
     <header className="sticky top-0 z-40 border-b border-border/60 bg-background/70 backdrop-blur-xl">
       <div className="mx-auto flex h-16 max-w-6xl items-center justify-between px-4 sm:px-6">
@@ -24,14 +27,35 @@ export function SiteHeader() {
             FAQ
           </a>
         </nav>
-        <a
-          href="https://wa.me/237683179424"
-          target="_blank"
-          rel="noreferrer"
-          className="rounded-full border border-border bg-surface px-4 py-1.5 text-sm font-medium text-foreground/90 hover:border-primary/40 hover:text-foreground transition"
-        >
-          Support WhatsApp
-        </a>
+        <div className="flex items-center gap-3">
+          {loading ? (
+            <span className="rounded-full border border-border bg-surface px-4 py-1.5 text-sm font-medium text-foreground/90">
+              <Loader2 className="h-4 w-4 animate-spin" />
+            </span>
+          ) : user ? (
+            <Link
+              to="/compte"
+              className="inline-flex items-center gap-2 rounded-full border border-border bg-surface px-4 py-1.5 text-sm font-medium text-foreground/90 hover:border-primary/40 hover:text-foreground transition"
+            >
+              <User className="h-4 w-4" /> Mon compte
+            </Link>
+          ) : (
+            <Link
+              to="/auth"
+              className="inline-flex items-center gap-2 rounded-full border border-border bg-surface px-4 py-1.5 text-sm font-medium text-foreground/90 hover:border-primary/40 hover:text-foreground transition"
+            >
+              <User className="h-4 w-4" /> Connexion
+            </Link>
+          )}
+          <a
+            href="https://wa.me/237683179424"
+            target="_blank"
+            rel="noreferrer"
+            className="hidden rounded-full border border-border bg-surface px-4 py-1.5 text-sm font-medium text-foreground/90 hover:border-primary/40 hover:text-foreground transition sm:inline-block"
+          >
+            Support WhatsApp
+          </a>
+        </div>
       </div>
     </header>
   );
