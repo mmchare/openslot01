@@ -2,14 +2,13 @@ import { createServerFn } from "@tanstack/react-start";
 import { getRequestHost } from "@tanstack/react-start/server";
 import { z } from "zod";
 import {
-  directChargeWithRetry,
-  initializeNotchPayment,
-  type MobileMoneyChannel,
-} from "./notchpay.server";
+  createSasPayPayment,
+  type SasPayNetwork,
+} from "./saspay.server";
 import { logPaymentEvent } from "./payment-events.server";
 import {
   recoverRecentMtnProcessingOrder,
-  syncOrderWithNotchPay,
+  syncOrderWithSasPay,
 } from "./order-payment-sync.server";
 import {
   serverDb,
@@ -84,74 +83,57 @@ export const createOrder = createServerFn({ method: "POST" })
       const protocol = host.startsWith("localhost") ? "http" : "https";
       baseUrl = `${protocol}://${host}`;
     }
-    const callbackUrl = `${baseUrl}/commande/succes/${order.order_id}`;
+    const returnUrl = `${baseUrl}/commande/succes/${order.order_id}`;
 
-    const pay = await initializeNotchPayment({
+    const network: SasPayNetwork =
+      data.channel === "cm.orange" ? "orange_cm" : "mtn_cm";
+
+    const pay = await createSasPayPayment({
       orderId: order.order_id,
       amountFcfa: order.amount_paid,
+      network,
       customer: {
         email: data.client_email,
         name: data.client_name,
         phone: data.client_whatsapp,
       },
-      callbackUrl,
+      returnUrl,
     });
 
-    await srvSetOrderReference(order.order_id, pay.reference);
+    await srvSetOrderReference(order.order_id, pay.payment_id);
 
-    const instruction =
-      data.channel === "cm.orange"
-        ? "Attends le prompt Orange Money sur ton téléphone, puis entre ton PIN pour confirmer. Si rien n'apparaît sous 30s, compose #150*50# pour valider la transaction en attente."
-        : "Pour MTN, compose *126# tout de suite, choisis Approve payment / Valider paiement, puis entre ton PIN. Si un prompt MTN s'affiche automatiquement, tu peux aussi le valider directement.";
-
-    try {
-      // Direct Charge — déclenche immédiatement le prompt USSD sur le téléphone.
-      const charge = await directChargeWithRetry({
-        reference: pay.reference,
-        channel: data.channel as MobileMoneyChannel,
-        phone: data.client_whatsapp,
-        orderId: order.order_id,
-      });
-
-      return {
-        order_id: order.order_id,
-        status: charge.status,
-        instruction,
-        checkout_url: null,
-        payment_mode: "direct_charge" as const,
-      };
-
-    } catch (err) {
-      // Notch Pay renvoie parfois une erreur 500 sur le Direct Charge (Orange
-      // comme MTN). On bascule alors sur la page de paiement hébergée.
-      if (!pay.authorization_url) throw err;
-
-
+    // SasPay renvoie une page de paiement pour certains réseaux (Orange, carte).
+    // Dans ce cas aucun prompt n'arrive sur le téléphone : il faut y rediriger.
+    if (pay.checkout_url) {
       await logPaymentEvent({
         order_id: order.order_id,
-        notchpay_reference: pay.reference,
-        event_type: "direct_charge_failed_checkout_fallback",
-        level: "warn",
-        message:
-          err instanceof Error
-            ? err.message
-            : "Direct Charge indisponible, bascule vers Checkout Notch Pay.",
-        metadata: {
-          channel: data.channel,
-          fallback: "checkout",
-          authorization_url_available: Boolean(pay.authorization_url),
-        },
+        notchpay_reference: pay.payment_id,
+        event_type: "saspay_checkout_redirect",
+        metadata: { network, checkout_url_available: true },
       });
 
       return {
         order_id: order.order_id,
-        status: "checkout_fallback",
+        status: pay.status,
         instruction:
-          "Le prompt automatique n'a pas répondu. Termine le paiement sur la page sécurisée Notch Pay.",
-        checkout_url: pay.authorization_url,
+          "Termine le paiement sur la page sécurisée SasPay, puis reviens ici : la commande se débloque automatiquement.",
+        checkout_url: pay.checkout_url,
         payment_mode: "checkout_fallback" as const,
       };
     }
+
+    const instruction =
+      network === "orange_cm"
+        ? "Attends la demande Orange Money sur ton téléphone, puis entre ton PIN pour confirmer. Si rien n'apparaît sous 30s, compose #150*50# pour valider la transaction en attente."
+        : "Pour MTN, compose *126# tout de suite, choisis Approve payment / Valider paiement, puis entre ton PIN. Si une demande MTN s'affiche automatiquement, tu peux aussi la valider directement.";
+
+    return {
+      order_id: order.order_id,
+      status: pay.status,
+      instruction,
+      checkout_url: null,
+      payment_mode: "direct_charge" as const,
+    };
   });
 
 export const getOrderForSuccess = createServerFn({ method: "GET" })
