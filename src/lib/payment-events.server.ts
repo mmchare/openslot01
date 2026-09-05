@@ -26,6 +26,14 @@ export type PaymentEventType =
   | "notchpay_status_check_error"
   | "notchpay_failed_deferred"
   | "notchpay_order_synced"
+  | "saspay_init_request"
+  | "saspay_init_success"
+  | "saspay_init_error"
+  | "saspay_checkout_redirect"
+  | "saspay_status_check_success"
+  | "saspay_status_check_error"
+  | "saspay_failed_deferred"
+  | "saspay_order_synced"
   | "success_page_view";
 
 export type PaymentEventLevel = "info" | "warn" | "error";
