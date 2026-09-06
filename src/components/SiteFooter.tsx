@@ -13,7 +13,7 @@ export function SiteFooter() {
         </div>
       </div>
       <p className="mx-auto mt-4 max-w-6xl px-4 text-xs sm:px-6">
-        © {new Date().getFullYear()} OpenSlot. Paiements sécurisés via Notch Pay (MTN MoMo & Orange Money).
+        © {new Date().getFullYear()} OpenSlot. Paiements sécurisés via SasPay (MTN MoMo & Orange Money).
       </p>
     </footer>
   );

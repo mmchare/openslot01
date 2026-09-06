@@ -129,7 +129,7 @@ function Dashboard({ password }: { password: string }) {
       </h1>
       <p className="mt-1 text-sm text-muted-foreground">
         Recherche par ID de commande (UUID complet, 8 premiers caractères) ou
-        référence Notch Pay. Auto-rafraîchissement des commandes des 24 dernières
+        référence SasPay. Auto-rafraîchissement des commandes des 24 dernières
         heures toutes les 15s.
       </p>
 
@@ -148,7 +148,7 @@ function Dashboard({ password }: { password: string }) {
           <input
             value={query}
             onChange={(e) => setQuery(e.target.value)}
-            placeholder="ID commande, préfixe UUID, ou référence Notch Pay"
+            placeholder="ID commande, préfixe UUID, ou référence SasPay"
             className="w-full rounded-lg border border-border bg-input px-9 py-2 text-sm outline-none focus:border-primary"
           />
         </div>
@@ -311,12 +311,12 @@ function LookupResult({
 }) {
   const summary = useMemo(() => {
     const types = new Set(data.events.map((e) => e.event_type));
-    const hasInit = types.has("notchpay_init_success") || types.has("notchpay_dev_mode");
-    const hasInitErr = types.has("notchpay_init_error");
-    const hasDirectCharge = types.has("notchpay_direct_charge_success");
-    const hasDirectChargeErr = types.has("notchpay_direct_charge_error");
+    const hasInit = types.has("saspay_init_success") || types.has("notchpay_init_success") || types.has("notchpay_dev_mode");
+    const hasInitErr = types.has("saspay_init_error") || types.has("notchpay_init_error");
+    const hasDirectCharge = types.has("saspay_init_success");
+    const hasDirectChargeErr = types.has("saspay_init_error");
     const hasCheckoutFallback = types.has("direct_charge_failed_checkout_fallback");
-    const hasStatusCheck = types.has("notchpay_status_check_success");
+    const hasStatusCheck = types.has("saspay_status_check_success") || types.has("notchpay_status_check_success");
     const hasRedirect = types.has("redirect_to_gateway");
     const hasWebhook = types.has("webhook_received");
     const hasAlloc = types.has("webhook_allocation_success") || types.has("dev_simulate_success");
@@ -368,7 +368,7 @@ function LookupResult({
               {data.order.amount_paid.toLocaleString("fr-FR")} FCFA
             </div>
             <div className="sm:col-span-2">
-              <span className="text-muted-foreground">Réf. Notch Pay : </span>
+              <span className="text-muted-foreground">Réf. SasPay : </span>
               <span className="font-mono text-xs">
                 {data.order.notchpay_reference ?? "—"}
               </span>
@@ -402,7 +402,7 @@ function LookupResult({
       ) : (
         <div className="rounded-xl border border-yellow-500/40 bg-yellow-500/10 p-4 text-sm">
           Commande non trouvée pour cette recherche. Les événements ci-dessous
-          (si présents) correspondent à la référence Notch Pay.
+          (si présents) correspondent à la référence SasPay.
         </div>
       )}
 

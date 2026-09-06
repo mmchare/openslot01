@@ -108,7 +108,7 @@ function HomePage() {
         <div className="mt-8 grid gap-4 sm:grid-cols-3">
           {[
             { n: "1", t: "Choisis ton app", d: "Sélectionne un service dans le catalogue." },
-            { n: "2", t: "Paie en Mobile Money", d: "MTN MoMo ou Orange Money via Notch Pay." },
+            { n: "2", t: "Paie en Mobile Money", d: "MTN MoMo ou Orange Money via SasPay." },
             { n: "3", t: "Reçois tes accès", d: "Email + mot de passe + n° d'écran, sur la page et sur WhatsApp." },
           ].map((s) => (
             <div
