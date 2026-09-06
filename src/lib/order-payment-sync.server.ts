@@ -43,7 +43,7 @@ export function getMtnManualApprovalState(
     shouldDefer: graceMs > 0 && ageMs < graceMs,
     remainingSeconds: Math.max(
       0,
-      Math.ceil((MTN_MANUAL_APPROVAL_GRACE_MS - ageMs) / 1000),
+      Math.ceil((graceMs - ageMs) / 1000),
     ),
   };
 }
