@@ -164,7 +164,7 @@ export const getOrderForSuccess = createServerFn({ method: "GET" })
 
     if (order.status === "en_attente" && order.notchpay_reference) {
       try {
-        await syncOrderWithNotchPay({
+        await syncOrderWithSasPay({
           orderId: order.id,
           notchpayReference: order.notchpay_reference,
           currentStatus: order.status,

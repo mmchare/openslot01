@@ -25,7 +25,6 @@ import { Route as ApiPublicHealthRouteImport } from './routes/api/public/health'
 import { Route as AuthenticatedCompteCommandesRouteImport } from './routes/_authenticated/compte.commandes'
 import { Route as Char91DotmcpChar93InvokeToolToolRouteImport } from './routes/[.mcp]/invoke-tool/$tool'
 import { Route as ApiPublicWebhooksSaspayRouteImport } from './routes/api/public/webhooks/saspay'
-import { Route as ApiPublicWebhooksNotchpayRouteImport } from './routes/api/public/webhooks/notchpay'
 
 const McpRoute = McpRouteImport.update({
   id: '/mcp',
@@ -110,12 +109,6 @@ const ApiPublicWebhooksSaspayRoute = ApiPublicWebhooksSaspayRouteImport.update({
   path: '/api/public/webhooks/saspay',
   getParentRoute: () => rootRouteImport,
 } as any)
-const ApiPublicWebhooksNotchpayRoute =
-  ApiPublicWebhooksNotchpayRouteImport.update({
-    id: '/api/public/webhooks/notchpay',
-    path: '/api/public/webhooks/notchpay',
-    getParentRoute: () => rootRouteImport,
-  } as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
@@ -132,7 +125,6 @@ export interface FileRoutesByFullPath {
   '/compte/commandes': typeof AuthenticatedCompteCommandesRoute
   '/api/public/health': typeof ApiPublicHealthRoute
   '/commande/succes/$orderId': typeof CommandeSuccesOrderIdRoute
-  '/api/public/webhooks/notchpay': typeof ApiPublicWebhooksNotchpayRoute
   '/api/public/webhooks/saspay': typeof ApiPublicWebhooksSaspayRoute
 }
 export interface FileRoutesByTo {
@@ -150,7 +142,6 @@ export interface FileRoutesByTo {
   '/compte/commandes': typeof AuthenticatedCompteCommandesRoute
   '/api/public/health': typeof ApiPublicHealthRoute
   '/commande/succes/$orderId': typeof CommandeSuccesOrderIdRoute
-  '/api/public/webhooks/notchpay': typeof ApiPublicWebhooksNotchpayRoute
   '/api/public/webhooks/saspay': typeof ApiPublicWebhooksSaspayRoute
 }
 export interface FileRoutesById {
@@ -170,7 +161,6 @@ export interface FileRoutesById {
   '/_authenticated/compte/commandes': typeof AuthenticatedCompteCommandesRoute
   '/api/public/health': typeof ApiPublicHealthRoute
   '/commande/succes/$orderId': typeof CommandeSuccesOrderIdRoute
-  '/api/public/webhooks/notchpay': typeof ApiPublicWebhooksNotchpayRoute
   '/api/public/webhooks/saspay': typeof ApiPublicWebhooksSaspayRoute
 }
 export interface FileRouteTypes {
@@ -190,7 +180,6 @@ export interface FileRouteTypes {
     | '/compte/commandes'
     | '/api/public/health'
     | '/commande/succes/$orderId'
-    | '/api/public/webhooks/notchpay'
     | '/api/public/webhooks/saspay'
   fileRoutesByTo: FileRoutesByTo
   to:
@@ -208,7 +197,6 @@ export interface FileRouteTypes {
     | '/compte/commandes'
     | '/api/public/health'
     | '/commande/succes/$orderId'
-    | '/api/public/webhooks/notchpay'
     | '/api/public/webhooks/saspay'
   id:
     | '__root__'
@@ -227,7 +215,6 @@ export interface FileRouteTypes {
     | '/_authenticated/compte/commandes'
     | '/api/public/health'
     | '/commande/succes/$orderId'
-    | '/api/public/webhooks/notchpay'
     | '/api/public/webhooks/saspay'
   fileRoutesById: FileRoutesById
 }
@@ -244,7 +231,6 @@ export interface RootRouteChildren {
   Char91DotmcpChar93InvokeToolToolRoute: typeof Char91DotmcpChar93InvokeToolToolRoute
   ApiPublicHealthRoute: typeof ApiPublicHealthRoute
   CommandeSuccesOrderIdRoute: typeof CommandeSuccesOrderIdRoute
-  ApiPublicWebhooksNotchpayRoute: typeof ApiPublicWebhooksNotchpayRoute
   ApiPublicWebhooksSaspayRoute: typeof ApiPublicWebhooksSaspayRoute
 }
 
@@ -362,13 +348,6 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ApiPublicWebhooksSaspayRouteImport
       parentRoute: typeof rootRouteImport
     }
-    '/api/public/webhooks/notchpay': {
-      id: '/api/public/webhooks/notchpay'
-      path: '/api/public/webhooks/notchpay'
-      fullPath: '/api/public/webhooks/notchpay'
-      preLoaderRoute: typeof ApiPublicWebhooksNotchpayRouteImport
-      parentRoute: typeof rootRouteImport
-    }
   }
 }
 
@@ -418,7 +397,6 @@ const rootRouteChildren: RootRouteChildren = {
   Char91DotmcpChar93InvokeToolToolRoute: Char91DotmcpChar93InvokeToolToolRoute,
   ApiPublicHealthRoute: ApiPublicHealthRoute,
   CommandeSuccesOrderIdRoute: CommandeSuccesOrderIdRoute,
-  ApiPublicWebhooksNotchpayRoute: ApiPublicWebhooksNotchpayRoute,
   ApiPublicWebhooksSaspayRoute: ApiPublicWebhooksSaspayRoute,
 }
 export const routeTree = rootRouteImport

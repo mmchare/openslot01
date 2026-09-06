@@ -281,7 +281,7 @@ function OrderPage() {
 
 
             <div className="mt-4 flex items-center justify-center gap-2 text-xs text-muted-foreground">
-              <Lock className="h-3 w-3" /> Paiement sécurisé Notch Pay · MTN MoMo & Orange Money
+              <Lock className="h-3 w-3" /> Paiement sécurisé SasPay · MTN MoMo & Orange Money
             </div>
           </form>
 

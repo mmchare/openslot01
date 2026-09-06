@@ -10,8 +10,8 @@ export const Route = createFileRoute("/api/public/health")({
           "SUPABASE_URL",
           "SUPABASE_PUBLISHABLE_KEY",
           "APP_SERVER_SECRET",
-          "NOTCHPAY_PUBLIC_KEY",
-          "NOTCHPAY_HASH",
+          "SASPAY_API_KEY",
+          "SASPAY_WEBHOOK_SECRET",
           "ADMIN_PASSWORD",
         ];
 

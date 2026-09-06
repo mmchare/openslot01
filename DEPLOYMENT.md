@@ -24,20 +24,20 @@ SUPABASE_PUBLISHABLE_KEY
 VITE_SUPABASE_URL
 VITE_SUPABASE_PUBLISHABLE_KEY
 APP_SERVER_SECRET
-NOTCHPAY_PUBLIC_KEY
-NOTCHPAY_HASH
+SASPAY_API_KEY
+SASPAY_WEBHOOK_SECRET
 ADMIN_PASSWORD
 ```
 
-`NOTCHPAY_PRIVATE_KEY` n'est pas nécessaire pour le flux actuel si NotchPay confirme que la clé publique suffit à l'initialisation et au Direct Charge.
+`SASPAY_API_KEY` est la clé secrète (sk_live_...) du tableau de bord SasPay ; `SASPAY_WEBHOOK_SECRET` est le secret de signature du webhook.
 
 ## Important
 
-- Ne pas déployer ce projet comme un site statique Vercel ou Cloudflare Pages simple : les routes de commande, le webhook NotchPay et les fonctions serveur nécessitent le Worker.
-- L'URL webhook NotchPay doit pointer vers le domaine Worker publié :
+- Ne pas déployer ce projet comme un site statique Vercel ou Cloudflare Pages simple : les routes de commande, le webhook SasPay et les fonctions serveur nécessitent le Worker.
+- L'URL webhook SasPay doit pointer vers le domaine Worker publié :
 
 ```text
-https://votre-domaine/api/public/webhooks/notchpay
+https://votre-domaine/api/public/webhooks/saspay
 ```
 
 ## Sans clé service role
