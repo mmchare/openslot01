@@ -64,7 +64,7 @@ function splitName(fullName: string): { first_name: string; last_name: string } 
 }
 
 export function isSasPaySuccessful(status: string): boolean {
-  return ["success", "successful", "completed", "complete"].includes(
+  return ["success", "successful", "completed", "complete", "paid"].includes(
     status.toLowerCase(),
   );
 }
