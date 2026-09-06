@@ -19,20 +19,31 @@ interface SyncOrderInput {
 }
 
 const MTN_MANUAL_APPROVAL_GRACE_MS = 15 * 60 * 1000;
+const ORANGE_MANUAL_APPROVAL_GRACE_MS = 5 * 60 * 1000;
 
+// Les deux opérateurs camerounais peuvent renvoyer "failed" quelques secondes
+// après le push, alors que le client peut encore valider manuellement
+// (*126# pour MTN, #150*50# pour Orange). On garde donc la commande en attente
+// pendant une fenêtre de grâce.
 export function getMtnManualApprovalState(
   createdAt: string | null | undefined,
   phone: string | null | undefined,
 ): { shouldDefer: boolean; remainingSeconds: number } {
   const orderCreatedAt = createdAt ? new Date(createdAt).getTime() : Date.now();
   const ageMs = Date.now() - orderCreatedAt;
-  const isMtn = detectCameroonNetwork(phone ?? "") === "mtn_cm";
+  const network = detectCameroonNetwork(phone ?? "");
+  const graceMs =
+    network === "mtn_cm"
+      ? MTN_MANUAL_APPROVAL_GRACE_MS
+      : network === "orange_cm"
+        ? ORANGE_MANUAL_APPROVAL_GRACE_MS
+        : 0;
 
   return {
-    shouldDefer: isMtn && ageMs < MTN_MANUAL_APPROVAL_GRACE_MS,
+    shouldDefer: graceMs > 0 && ageMs < graceMs,
     remainingSeconds: Math.max(
       0,
-      Math.ceil((MTN_MANUAL_APPROVAL_GRACE_MS - ageMs) / 1000),
+      Math.ceil((graceMs - ageMs) / 1000),
     ),
   };
 }
