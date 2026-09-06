@@ -223,11 +223,82 @@ export interface SasPayStatusResult {
   currency: string | null;
 }
 
+export interface CheckoutSessionResult {
+  session_id: string;
+  checkout_url: string;
+  status: string;
+}
+
+// Page de paiement hébergée SasPay : le client choisit son opérateur et
+// reçoit le prompt Mobile Money depuis la page sécurisée.
+export async function createSasPayCheckoutSession(input: {
+  orderId: string;
+  amountFcfa: number;
+  customer: { email: string; name: string; phone: string };
+  returnUrl: string;
+}): Promise<CheckoutSessionResult> {
+  const res = await fetch(`${SASPAY_BASE}/checkout-sessions/`, {
+    method: "POST",
+    headers: {
+      Authorization: `Bearer ${apiKey()}`,
+      "Content-Type": "application/json",
+      Accept: "application/json",
+    },
+    body: JSON.stringify({
+      amount: input.amountFcfa.toFixed(2),
+      currency: "XAF",
+      country: "CM",
+      description: `OpenSlot — Commande ${input.orderId}`,
+      customer_email: input.customer.email,
+      customer_name: input.customer.name,
+      customer_phone: normalizeCameroonPhone(input.customer.phone),
+      return_url: input.returnUrl,
+      metadata: { order_id: input.orderId },
+    }),
+  });
+
+  const bodyText = await res.text();
+  let json: unknown = null;
+  try {
+    json = JSON.parse(bodyText);
+  } catch {
+    // conserver bodyText
+  }
+
+  const data = unwrap<{ id?: string; checkout_url?: string; status?: string }>(json);
+
+  if (!res.ok || !data?.id || !data.checkout_url) {
+    await logPaymentEvent({
+      order_id: input.orderId,
+      event_type: "saspay_init_error",
+      level: "error",
+      message: `SasPay checkout session failed (${res.status})`,
+      metadata: { status: res.status, body: bodyText.slice(0, 1000) },
+    });
+    throw new Error(
+      readErrorMessage(json, `Page de paiement SasPay indisponible (${res.status}).`),
+    );
+  }
+
+  await logPaymentEvent({
+    order_id: input.orderId,
+    notchpay_reference: data.id,
+    event_type: "saspay_init_success",
+    metadata: { mode: "checkout_session", status: data.status ?? "PENDING" },
+  });
+
+  return {
+    session_id: data.id,
+    checkout_url: data.checkout_url,
+    status: (data.status ?? "PENDING").toLowerCase(),
+  };
+}
+
 export async function getSasPayPaymentStatus(
   paymentId: string,
   orderId?: string,
 ): Promise<SasPayStatusResult> {
-  const res = await fetch(
+  let res = await fetch(
     `${SASPAY_BASE}/payments/${encodeURIComponent(paymentId)}/verify/`,
     {
       method: "GET",
@@ -237,6 +308,20 @@ export async function getSasPayPaymentStatus(
       },
     },
   );
+
+  // Une référence de session de paiement hébergée se vérifie ailleurs.
+  if (res.status === 404) {
+    res = await fetch(
+      `${SASPAY_BASE}/checkout-sessions/${encodeURIComponent(paymentId)}/`,
+      {
+        method: "GET",
+        headers: {
+          Authorization: `Bearer ${apiKey()}`,
+          Accept: "application/json",
+        },
+      },
+    );
+  }
 
   const bodyText = await res.text();
   let json: unknown = null;
