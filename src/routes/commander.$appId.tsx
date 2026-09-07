@@ -119,15 +119,20 @@ function OrderPage() {
         },
       });
 
-      // On reste dans l'app : la page de suivi affiche soit l'instruction USSD,
-      // soit le bouton de paiement sécurisé si le prompt direct a échoué.
+      // Redirection directe vers la page de paiement sécurisée SasPay.
+      // Après paiement, SasPay ramène le client sur la page de suivi
+      // (return_url = /commande/succes/{id}), qui confirme automatiquement.
+      if (res.checkout_url) {
+        window.location.href = res.checkout_url;
+        return;
+      }
+
       navigate({
         to: "/commande/succes/$orderId",
         params: { orderId: res.order_id },
         search: {
           confirm: 1,
           instruction: res.instruction,
-          ...(res.checkout_url ? { checkout: res.checkout_url } : {}),
         },
       });
 
