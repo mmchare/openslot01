@@ -7,6 +7,7 @@ import {
 import { getMtnManualApprovalState } from "@/lib/order-payment-sync.server";
 import { logPaymentEvent } from "@/lib/payment-events.server";
 import {
+  srvGetOrder,
   srvFindOrderByReference,
   srvMarkOrderPaid,
   srvSetOrderStatus,
@@ -48,6 +49,7 @@ export const Route = createFileRoute("/api/public/webhooks/saspay")({
             reference?: string;
             status?: string;
             type?: string;
+            metadata?: { order_id?: string } | null;
           };
         };
         try {
@@ -87,7 +89,14 @@ export const Route = createFileRoute("/api/public/webhooks/saspay")({
           return new Response("Missing fields", { status: 400 });
         }
 
-        const order = await srvFindOrderByReference(paymentId, reference);
+        // Un paiement lancé depuis la page hébergée porte un identifiant de
+        // transaction différent de la référence stockée : on retombe alors
+        // sur l'identifiant de commande présent dans les métadonnées.
+        const order =
+          (await srvFindOrderByReference(paymentId, reference)) ??
+          (tx.metadata?.order_id
+            ? await srvGetOrder(tx.metadata.order_id)
+            : null);
 
         if (!order) {
           await logPaymentEvent({
