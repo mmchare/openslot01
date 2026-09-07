@@ -88,22 +88,61 @@ export const createOrder = createServerFn({ method: "POST" })
     const network: SasPayNetwork =
       data.channel === "cm.orange" ? "orange_cm" : "mtn_cm";
 
-    const pay = await createSasPayPayment({
-      orderId: order.order_id,
-      amountFcfa: order.amount_paid,
-      network,
-      customer: {
-        email: data.client_email,
-        name: data.client_name,
-        phone: data.client_whatsapp,
-      },
-      returnUrl,
-    });
+    const openCheckout = async () => {
+      const session = await createSasPayCheckoutSession({
+        orderId: order.order_id,
+        amountFcfa: order.amount_paid,
+        customer: {
+          email: data.client_email,
+          name: data.client_name,
+          phone: data.client_whatsapp,
+        },
+        returnUrl,
+      });
+
+      await srvSetOrderReference(order.order_id, session.session_id);
+      await logPaymentEvent({
+        order_id: order.order_id,
+        notchpay_reference: session.session_id,
+        event_type: "saspay_checkout_redirect",
+        metadata: { network, checkout_url_available: true },
+      });
+
+      return {
+        order_id: order.order_id,
+        status: session.status,
+        instruction:
+          "Termine le paiement sur la page sécurisée SasPay : choisis ton opérateur, puis valide la demande avec ton code PIN. La commande se débloque automatiquement.",
+        checkout_url: session.checkout_url,
+        payment_mode: "checkout_fallback" as const,
+      };
+    };
+
+    // Le push direct Orange est refusé par la passerelle : on passe
+    // systématiquement par la page de paiement hébergée pour ce réseau.
+    if (network === "orange_cm") {
+      return await openCheckout();
+    }
+
+    let pay: Awaited<ReturnType<typeof createSasPayPayment>>;
+    try {
+      pay = await createSasPayPayment({
+        orderId: order.order_id,
+        amountFcfa: order.amount_paid,
+        network,
+        customer: {
+          email: data.client_email,
+          name: data.client_name,
+          phone: data.client_whatsapp,
+        },
+        returnUrl,
+      });
+    } catch {
+      return await openCheckout();
+    }
 
     await srvSetOrderReference(order.order_id, pay.payment_id);
 
-    // SasPay renvoie une page de paiement pour certains réseaux (Orange, carte).
-    // Dans ce cas aucun prompt n'arrive sur le téléphone : il faut y rediriger.
     if (pay.checkout_url) {
       await logPaymentEvent({
         order_id: order.order_id,
@@ -122,15 +161,11 @@ export const createOrder = createServerFn({ method: "POST" })
       };
     }
 
-    const instruction =
-      network === "orange_cm"
-        ? "Attends la demande Orange Money sur ton téléphone, puis entre ton PIN pour confirmer. Si rien n'apparaît sous 30s, compose #150*50# pour valider la transaction en attente."
-        : "Pour MTN, compose *126# tout de suite, choisis Approve payment / Valider paiement, puis entre ton PIN. Si une demande MTN s'affiche automatiquement, tu peux aussi la valider directement.";
-
     return {
       order_id: order.order_id,
       status: pay.status,
-      instruction,
+      instruction:
+        "Pour MTN, compose *126# tout de suite, choisis Approve payment / Valider paiement, puis entre ton PIN. Si une demande MTN s'affiche automatiquement, tu peux aussi la valider directement.",
       checkout_url: null,
       payment_mode: "direct_charge" as const,
     };
