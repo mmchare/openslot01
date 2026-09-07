@@ -89,6 +89,8 @@ export const createOrder = createServerFn({ method: "POST" })
     const network: SasPayNetwork =
       data.channel === "cm.orange" ? "orange_cm" : "mtn_cm";
 
+    // Parcours unifié : tous les paiements passent par la page hébergée
+    // sécurisée SasPay (choix de l'opérateur + validation PIN côté passerelle).
     const openCheckout = async () => {
       const session = await createSasPayCheckoutSession({
         orderId: order.order_id,
