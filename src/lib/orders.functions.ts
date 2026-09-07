@@ -121,57 +121,7 @@ export const createOrder = createServerFn({ method: "POST" })
       };
     };
 
-    // Le push direct Orange est refusé par la passerelle : on passe
-    // systématiquement par la page de paiement hébergée pour ce réseau.
-    if (network === "orange_cm") {
-      return await openCheckout();
-    }
-
-    let pay: Awaited<ReturnType<typeof createSasPayPayment>>;
-    try {
-      pay = await createSasPayPayment({
-        orderId: order.order_id,
-        amountFcfa: order.amount_paid,
-        network,
-        customer: {
-          email: data.client_email,
-          name: data.client_name,
-          phone: data.client_whatsapp,
-        },
-        returnUrl,
-      });
-    } catch {
-      return await openCheckout();
-    }
-
-    await srvSetOrderReference(order.order_id, pay.payment_id);
-
-    if (pay.checkout_url) {
-      await logPaymentEvent({
-        order_id: order.order_id,
-        notchpay_reference: pay.payment_id,
-        event_type: "saspay_checkout_redirect",
-        metadata: { network, checkout_url_available: true },
-      });
-
-      return {
-        order_id: order.order_id,
-        status: pay.status,
-        instruction:
-          "Termine le paiement sur la page sécurisée SasPay, puis reviens ici : la commande se débloque automatiquement.",
-        checkout_url: pay.checkout_url,
-        payment_mode: "checkout_fallback" as const,
-      };
-    }
-
-    return {
-      order_id: order.order_id,
-      status: pay.status,
-      instruction:
-        "Pour MTN, compose *126# tout de suite, choisis Approve payment / Valider paiement, puis entre ton PIN. Si une demande MTN s'affiche automatiquement, tu peux aussi la valider directement.",
-      checkout_url: null,
-      payment_mode: "direct_charge" as const,
-    };
+    return await openCheckout();
   });
 
 export const getOrderForSuccess = createServerFn({ method: "GET" })
