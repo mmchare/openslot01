@@ -48,6 +48,7 @@ export const Route = createFileRoute("/api/public/webhooks/saspay")({
             reference?: string;
             status?: string;
             type?: string;
+            metadata?: { order_id?: string } | null;
           };
         };
         try {
