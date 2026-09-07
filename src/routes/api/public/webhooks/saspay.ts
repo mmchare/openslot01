@@ -7,6 +7,7 @@ import {
 import { getMtnManualApprovalState } from "@/lib/order-payment-sync.server";
 import { logPaymentEvent } from "@/lib/payment-events.server";
 import {
+  srvGetOrder,
   srvFindOrderByReference,
   srvMarkOrderPaid,
   srvSetOrderStatus,
