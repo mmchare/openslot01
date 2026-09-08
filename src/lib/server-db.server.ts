@@ -8,13 +8,24 @@ export function serverDb() {
 }
 
 export function serverSecret(): string {
-  const secret = process.env["APP_SERVER_SECRET"];
+  const secret = process.env["APP_SERVER_SECRET"]?.trim();
   if (!secret) {
     throw new Error(
-      "APP_SERVER_SECRET manquant. Ajoutez-le aux variables d'environnement du serveur.",
+      "Configuration du serveur incomplète (APP_SERVER_SECRET manquant). Ajoutez cette variable d'environnement puis redéployez.",
     );
   }
   return secret;
+}
+
+// "Unauthorized" vient de la base quand APP_SERVER_SECRET ne correspond pas
+// à la valeur enregistrée : on renvoie un message compréhensible.
+export function explainDbError(message: string): Error {
+  if (/unauthorized/i.test(message)) {
+    return new Error(
+      "Serveur non autorisé par la base de données : la variable APP_SERVER_SECRET de ce déploiement ne correspond pas à celle enregistrée. Mettez la même valeur partout, puis redéployez.",
+    );
+  }
+  return new Error(message);
 }
 
 export interface ServerOrder {
