@@ -8,13 +8,24 @@ export function serverDb() {
 }
 
 export function serverSecret(): string {
-  const secret = process.env["APP_SERVER_SECRET"];
+  const secret = process.env["APP_SERVER_SECRET"]?.trim();
   if (!secret) {
     throw new Error(
-      "APP_SERVER_SECRET manquant. Ajoutez-le aux variables d'environnement du serveur.",
+      "Configuration du serveur incomplète (APP_SERVER_SECRET manquant). Ajoutez cette variable d'environnement puis redéployez.",
     );
   }
   return secret;
+}
+
+// "Unauthorized" vient de la base quand APP_SERVER_SECRET ne correspond pas
+// à la valeur enregistrée : on renvoie un message compréhensible.
+export function explainDbError(message: string): Error {
+  if (/unauthorized/i.test(message)) {
+    return new Error(
+      "Serveur non autorisé par la base de données : la variable APP_SERVER_SECRET de ce déploiement ne correspond pas à celle enregistrée. Mettez la même valeur partout, puis redéployez.",
+    );
+  }
+  return new Error(message);
 }
 
 export interface ServerOrder {
@@ -51,7 +62,7 @@ export async function srvGetOrder(orderId: string): Promise<ServerOrder | null> 
     p_secret: serverSecret(),
     p_order_id: orderId,
   });
-  if (error) throw new Error(error.message);
+  if (error) throw explainDbError(error.message);
   return (data as unknown as ServerOrder | null) ?? null;
 }
 
@@ -61,7 +72,7 @@ export async function srvSetOrderReference(orderId: string, reference: string) {
     p_order_id: orderId,
     p_reference: reference,
   });
-  if (error) throw new Error(error.message);
+  if (error) throw explainDbError(error.message);
 }
 
 export async function srvSetOrderStatus(
@@ -75,7 +86,7 @@ export async function srvSetOrderStatus(
     p_status: status,
     p_expected_status: (expected ?? null) as unknown as string,
   });
-  if (error) throw new Error(error.message);
+  if (error) throw explainDbError(error.message);
   return Boolean(data);
 }
 
@@ -86,7 +97,7 @@ export async function srvMarkOrderPaid(
     p_secret: serverSecret(),
     p_order_id: orderId,
   });
-  if (error) throw new Error(error.message);
+  if (error) throw explainDbError(error.message);
   return (data as unknown as {
     application_name: string | null;
     remaining_stock: number | null;
@@ -109,7 +120,7 @@ export async function srvFindOrderByReference(
     p_reference: reference,
     p_trxref: (trxref ?? null) as unknown as string,
   });
-  if (error) throw new Error(error.message);
+  if (error) throw explainDbError(error.message);
   return (data as never) ?? null;
 }
 
@@ -122,7 +133,7 @@ export async function srvLastMtnProcessingEvent(orderId: string): Promise<{
     p_secret: serverSecret(),
     p_order_id: orderId,
   });
-  if (error) throw new Error(error.message);
+  if (error) throw explainDbError(error.message);
   return (data as never) ?? null;
 }
 
@@ -135,6 +146,6 @@ export async function srvAdmin<T>(
     p_action: action,
     p_payload: payload as never,
   });
-  if (error) throw new Error(error.message);
+  if (error) throw explainDbError(error.message);
   return data as unknown as T;
 }
