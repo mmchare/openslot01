@@ -62,7 +62,7 @@ export async function srvGetOrder(orderId: string): Promise<ServerOrder | null> 
     p_secret: serverSecret(),
     p_order_id: orderId,
   });
-  if (error) throw new Error(error.message);
+  if (error) throw explainDbError(error.message);
   return (data as unknown as ServerOrder | null) ?? null;
 }
 
@@ -72,7 +72,7 @@ export async function srvSetOrderReference(orderId: string, reference: string) {
     p_order_id: orderId,
     p_reference: reference,
   });
-  if (error) throw new Error(error.message);
+  if (error) throw explainDbError(error.message);
 }
 
 export async function srvSetOrderStatus(
@@ -86,7 +86,7 @@ export async function srvSetOrderStatus(
     p_status: status,
     p_expected_status: (expected ?? null) as unknown as string,
   });
-  if (error) throw new Error(error.message);
+  if (error) throw explainDbError(error.message);
   return Boolean(data);
 }
 
@@ -97,7 +97,7 @@ export async function srvMarkOrderPaid(
     p_secret: serverSecret(),
     p_order_id: orderId,
   });
-  if (error) throw new Error(error.message);
+  if (error) throw explainDbError(error.message);
   return (data as unknown as {
     application_name: string | null;
     remaining_stock: number | null;
@@ -120,7 +120,7 @@ export async function srvFindOrderByReference(
     p_reference: reference,
     p_trxref: (trxref ?? null) as unknown as string,
   });
-  if (error) throw new Error(error.message);
+  if (error) throw explainDbError(error.message);
   return (data as never) ?? null;
 }
 
@@ -133,7 +133,7 @@ export async function srvLastMtnProcessingEvent(orderId: string): Promise<{
     p_secret: serverSecret(),
     p_order_id: orderId,
   });
-  if (error) throw new Error(error.message);
+  if (error) throw explainDbError(error.message);
   return (data as never) ?? null;
 }
 
@@ -146,6 +146,6 @@ export async function srvAdmin<T>(
     p_action: action,
     p_payload: payload as never,
   });
-  if (error) throw new Error(error.message);
+  if (error) throw explainDbError(error.message);
   return data as unknown as T;
 }
