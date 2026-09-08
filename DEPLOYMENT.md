@@ -49,3 +49,32 @@ table interne `app_config` (clé `server_secret`).
 
 Elle peut donc être déployée sur n'importe quel hébergeur (Cloudflare Worker,
 Vercel, autre) avec uniquement les variables listées ci-dessus.
+
+## Vercel
+
+Les mêmes variables sont obligatoires côté Vercel (Project Settings →
+Environment Variables), pour Production ET Preview :
+
+```text
+SUPABASE_URL
+SUPABASE_PUBLISHABLE_KEY
+VITE_SUPABASE_URL
+VITE_SUPABASE_PUBLISHABLE_KEY
+APP_SERVER_SECRET
+SASPAY_API_KEY
+SASPAY_WEBHOOK_SECRET
+ADMIN_PASSWORD
+```
+
+`APP_SERVER_SECRET` doit être **exactement identique** à celui enregistré en
+base (table `app_config`, clé `server_secret`) et à celui de l'app Lovable.
+Sinon la base refuse toute écriture de paiement avec « Unauthorized ».
+
+Vérification après déploiement :
+
+```text
+https://votre-domaine-vercel/api/public/health?tests=1
+```
+
+La réponse indique si chaque variable est présente, si le secret serveur est
+accepté par la base, et si la clé SasPay est acceptée par la passerelle.
