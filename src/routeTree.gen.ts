@@ -9,31 +9,30 @@
 // Additionally, you should also exclude this file from your linter and/or formatter to prevent it from being checked or modified.
 
 import { Route as rootRouteImport } from './routes/__root'
-import { Route as McpRouteImport } from './routes/mcp'
-import { Route as AuthRouteImport } from './routes/auth'
-import { Route as AdminRouteImport } from './routes/admin'
-import { Route as AuthenticatedRouteRouteImport } from './routes/_authenticated/route'
 import { Route as IndexRouteImport } from './routes/index'
-import { Route as CommanderAppIdRouteImport } from './routes/commander.$appId'
-import { Route as CommandeOrderIdRouteImport } from './routes/commande.$orderId'
-import { Route as AdminDiagnosticRouteImport } from './routes/admin.diagnostic'
-import { Route as AuthenticatedCompteRouteImport } from './routes/_authenticated/compte'
-import { Route as Char91DotwellKnownChar93OauthProtectedResourceRouteImport } from './routes/[.well-known]/oauth-protected-resource'
+import { Route as AuthenticatedRouteRouteImport } from './routes/_authenticated/route'
+import { Route as AdminRouteImport } from './routes/admin'
+import { Route as AuthRouteImport } from './routes/auth'
+import { Route as McpRouteImport } from './routes/mcp'
 import { Route as Char91DotmcpChar93ListToolsRouteImport } from './routes/[.mcp]/list-tools'
-import { Route as CommandeSuccesOrderIdRouteImport } from './routes/commande.succes.$orderId'
-import { Route as ApiPublicHealthRouteImport } from './routes/api/public/health'
-import { Route as AuthenticatedCompteCommandesRouteImport } from './routes/_authenticated/compte.commandes'
+import { Route as Char91DotwellKnownChar93OauthProtectedResourceRouteImport } from './routes/[.well-known]/oauth-protected-resource'
+import { Route as AuthenticatedCompteRouteImport } from './routes/_authenticated/compte'
+import { Route as AdminDiagnosticRouteImport } from './routes/admin.diagnostic'
+import { Route as CommandeOrderIdRouteImport } from './routes/commande.$orderId'
+import { Route as CommanderAppIdRouteImport } from './routes/commander.$appId'
 import { Route as Char91DotmcpChar93InvokeToolToolRouteImport } from './routes/[.mcp]/invoke-tool/$tool'
+import { Route as AuthenticatedCompteCommandesRouteImport } from './routes/_authenticated/compte.commandes'
+import { Route as ApiPublicHealthRouteImport } from './routes/api/public/health'
+import { Route as CommandeSuccesOrderIdRouteImport } from './routes/commande.succes.$orderId'
 import { Route as ApiPublicWebhooksSaspayRouteImport } from './routes/api/public/webhooks/saspay'
 
-const McpRoute = McpRouteImport.update({
-  id: '/mcp',
-  path: '/mcp',
+const IndexRoute = IndexRouteImport.update({
+  id: '/',
+  path: '/',
   getParentRoute: () => rootRouteImport,
 } as any)
-const AuthRoute = AuthRouteImport.update({
-  id: '/auth',
-  path: '/auth',
+const AuthenticatedRouteRoute = AuthenticatedRouteRouteImport.update({
+  id: '/_authenticated',
   getParentRoute: () => rootRouteImport,
 } as any)
 const AdminRoute = AdminRouteImport.update({
@@ -41,13 +40,41 @@ const AdminRoute = AdminRouteImport.update({
   path: '/admin',
   getParentRoute: () => rootRouteImport,
 } as any)
-const AuthenticatedRouteRoute = AuthenticatedRouteRouteImport.update({
-  id: '/_authenticated',
+const AuthRoute = AuthRouteImport.update({
+  id: '/auth',
+  path: '/auth',
   getParentRoute: () => rootRouteImport,
 } as any)
-const IndexRoute = IndexRouteImport.update({
-  id: '/',
-  path: '/',
+const McpRoute = McpRouteImport.update({
+  id: '/mcp',
+  path: '/mcp',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const Char91DotmcpChar93ListToolsRoute =
+  Char91DotmcpChar93ListToolsRouteImport.update({
+    id: '/.mcp/list-tools',
+    path: '/.mcp/list-tools',
+    getParentRoute: () => rootRouteImport,
+  } as any)
+const Char91DotwellKnownChar93OauthProtectedResourceRoute =
+  Char91DotwellKnownChar93OauthProtectedResourceRouteImport.update({
+    id: '/.well-known/oauth-protected-resource',
+    path: '/.well-known/oauth-protected-resource',
+    getParentRoute: () => rootRouteImport,
+  } as any)
+const AuthenticatedCompteRoute = AuthenticatedCompteRouteImport.update({
+  id: '/compte',
+  path: '/compte',
+  getParentRoute: () => AuthenticatedRouteRoute,
+} as any)
+const AdminDiagnosticRoute = AdminDiagnosticRouteImport.update({
+  id: '/diagnostic',
+  path: '/diagnostic',
+  getParentRoute: () => AdminRoute,
+} as any)
+const CommandeOrderIdRoute = CommandeOrderIdRouteImport.update({
+  id: '/commande/$orderId',
+  path: '/commande/$orderId',
   getParentRoute: () => rootRouteImport,
 } as any)
 const CommanderAppIdRoute = CommanderAppIdRouteImport.update({
@@ -55,55 +82,28 @@ const CommanderAppIdRoute = CommanderAppIdRouteImport.update({
   path: '/commander/$appId',
   getParentRoute: () => rootRouteImport,
 } as any)
-const CommandeOrderIdRoute = CommandeOrderIdRouteImport.update({
-  id: '/commande/$orderId',
-  path: '/commande/$orderId',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const AdminDiagnosticRoute = AdminDiagnosticRouteImport.update({
-  id: '/diagnostic',
-  path: '/diagnostic',
-  getParentRoute: () => AdminRoute,
-} as any)
-const AuthenticatedCompteRoute = AuthenticatedCompteRouteImport.update({
-  id: '/compte',
-  path: '/compte',
-  getParentRoute: () => AuthenticatedRouteRoute,
-} as any)
-const Char91DotwellKnownChar93OauthProtectedResourceRoute =
-  Char91DotwellKnownChar93OauthProtectedResourceRouteImport.update({
-    id: '/.well-known/oauth-protected-resource',
-    path: '/.well-known/oauth-protected-resource',
-    getParentRoute: () => rootRouteImport,
-  } as any)
-const Char91DotmcpChar93ListToolsRoute =
-  Char91DotmcpChar93ListToolsRouteImport.update({
-    id: '/.mcp/list-tools',
-    path: '/.mcp/list-tools',
-    getParentRoute: () => rootRouteImport,
-  } as any)
-const CommandeSuccesOrderIdRoute = CommandeSuccesOrderIdRouteImport.update({
-  id: '/commande/succes/$orderId',
-  path: '/commande/succes/$orderId',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const ApiPublicHealthRoute = ApiPublicHealthRouteImport.update({
-  id: '/api/public/health',
-  path: '/api/public/health',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const AuthenticatedCompteCommandesRoute =
-  AuthenticatedCompteCommandesRouteImport.update({
-    id: '/commandes',
-    path: '/commandes',
-    getParentRoute: () => AuthenticatedCompteRoute,
-  } as any)
 const Char91DotmcpChar93InvokeToolToolRoute =
   Char91DotmcpChar93InvokeToolToolRouteImport.update({
     id: '/.mcp/invoke-tool/$tool',
     path: '/.mcp/invoke-tool/$tool',
     getParentRoute: () => rootRouteImport,
   } as any)
+const AuthenticatedCompteCommandesRoute =
+  AuthenticatedCompteCommandesRouteImport.update({
+    id: '/commandes',
+    path: '/commandes',
+    getParentRoute: () => AuthenticatedCompteRoute,
+  } as any)
+const ApiPublicHealthRoute = ApiPublicHealthRouteImport.update({
+  id: '/api/public/health',
+  path: '/api/public/health',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const CommandeSuccesOrderIdRoute = CommandeSuccesOrderIdRouteImport.update({
+  id: '/commande/succes/$orderId',
+  path: '/commande/succes/$orderId',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const ApiPublicWebhooksSaspayRoute = ApiPublicWebhooksSaspayRouteImport.update({
   id: '/api/public/webhooks/saspay',
   path: '/api/public/webhooks/saspay',
@@ -236,25 +236,11 @@ export interface RootRouteChildren {
 
 declare module '@tanstack/react-router' {
   interface FileRoutesByPath {
-    '/mcp': {
-      id: '/mcp'
-      path: '/mcp'
-      fullPath: '/mcp'
-      preLoaderRoute: typeof McpRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/auth': {
-      id: '/auth'
-      path: '/auth'
-      fullPath: '/auth'
-      preLoaderRoute: typeof AuthRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/admin': {
-      id: '/admin'
-      path: '/admin'
-      fullPath: '/admin'
-      preLoaderRoute: typeof AdminRouteImport
+    '/': {
+      id: '/'
+      path: '/'
+      fullPath: '/'
+      preLoaderRoute: typeof IndexRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/_authenticated': {
@@ -264,46 +250,25 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedRouteRouteImport
       parentRoute: typeof rootRouteImport
     }
-    '/': {
-      id: '/'
-      path: '/'
-      fullPath: '/'
-      preLoaderRoute: typeof IndexRouteImport
+    '/admin': {
+      id: '/admin'
+      path: '/admin'
+      fullPath: '/admin'
+      preLoaderRoute: typeof AdminRouteImport
       parentRoute: typeof rootRouteImport
     }
-    '/commander/$appId': {
-      id: '/commander/$appId'
-      path: '/commander/$appId'
-      fullPath: '/commander/$appId'
-      preLoaderRoute: typeof CommanderAppIdRouteImport
+    '/auth': {
+      id: '/auth'
+      path: '/auth'
+      fullPath: '/auth'
+      preLoaderRoute: typeof AuthRouteImport
       parentRoute: typeof rootRouteImport
     }
-    '/commande/$orderId': {
-      id: '/commande/$orderId'
-      path: '/commande/$orderId'
-      fullPath: '/commande/$orderId'
-      preLoaderRoute: typeof CommandeOrderIdRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/admin/diagnostic': {
-      id: '/admin/diagnostic'
-      path: '/diagnostic'
-      fullPath: '/admin/diagnostic'
-      preLoaderRoute: typeof AdminDiagnosticRouteImport
-      parentRoute: typeof AdminRoute
-    }
-    '/_authenticated/compte': {
-      id: '/_authenticated/compte'
-      path: '/compte'
-      fullPath: '/compte'
-      preLoaderRoute: typeof AuthenticatedCompteRouteImport
-      parentRoute: typeof AuthenticatedRouteRoute
-    }
-    '/.well-known/oauth-protected-resource': {
-      id: '/.well-known/oauth-protected-resource'
-      path: '/.well-known/oauth-protected-resource'
-      fullPath: '/.well-known/oauth-protected-resource'
-      preLoaderRoute: typeof Char91DotwellKnownChar93OauthProtectedResourceRouteImport
+    '/mcp': {
+      id: '/mcp'
+      path: '/mcp'
+      fullPath: '/mcp'
+      preLoaderRoute: typeof McpRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/.mcp/list-tools': {
@@ -313,18 +278,46 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof Char91DotmcpChar93ListToolsRouteImport
       parentRoute: typeof rootRouteImport
     }
-    '/commande/succes/$orderId': {
-      id: '/commande/succes/$orderId'
-      path: '/commande/succes/$orderId'
-      fullPath: '/commande/succes/$orderId'
-      preLoaderRoute: typeof CommandeSuccesOrderIdRouteImport
+    '/.well-known/oauth-protected-resource': {
+      id: '/.well-known/oauth-protected-resource'
+      path: '/.well-known/oauth-protected-resource'
+      fullPath: '/.well-known/oauth-protected-resource'
+      preLoaderRoute: typeof Char91DotwellKnownChar93OauthProtectedResourceRouteImport
       parentRoute: typeof rootRouteImport
     }
-    '/api/public/health': {
-      id: '/api/public/health'
-      path: '/api/public/health'
-      fullPath: '/api/public/health'
-      preLoaderRoute: typeof ApiPublicHealthRouteImport
+    '/_authenticated/compte': {
+      id: '/_authenticated/compte'
+      path: '/compte'
+      fullPath: '/compte'
+      preLoaderRoute: typeof AuthenticatedCompteRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
+    '/admin/diagnostic': {
+      id: '/admin/diagnostic'
+      path: '/diagnostic'
+      fullPath: '/admin/diagnostic'
+      preLoaderRoute: typeof AdminDiagnosticRouteImport
+      parentRoute: typeof AdminRoute
+    }
+    '/commande/$orderId': {
+      id: '/commande/$orderId'
+      path: '/commande/$orderId'
+      fullPath: '/commande/$orderId'
+      preLoaderRoute: typeof CommandeOrderIdRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/commander/$appId': {
+      id: '/commander/$appId'
+      path: '/commander/$appId'
+      fullPath: '/commander/$appId'
+      preLoaderRoute: typeof CommanderAppIdRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/.mcp/invoke-tool/$tool': {
+      id: '/.mcp/invoke-tool/$tool'
+      path: '/.mcp/invoke-tool/$tool'
+      fullPath: '/.mcp/invoke-tool/$tool'
+      preLoaderRoute: typeof Char91DotmcpChar93InvokeToolToolRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/_authenticated/compte/commandes': {
@@ -334,11 +327,18 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedCompteCommandesRouteImport
       parentRoute: typeof AuthenticatedCompteRoute
     }
-    '/.mcp/invoke-tool/$tool': {
-      id: '/.mcp/invoke-tool/$tool'
-      path: '/.mcp/invoke-tool/$tool'
-      fullPath: '/.mcp/invoke-tool/$tool'
-      preLoaderRoute: typeof Char91DotmcpChar93InvokeToolToolRouteImport
+    '/api/public/health': {
+      id: '/api/public/health'
+      path: '/api/public/health'
+      fullPath: '/api/public/health'
+      preLoaderRoute: typeof ApiPublicHealthRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/commande/succes/$orderId': {
+      id: '/commande/succes/$orderId'
+      path: '/commande/succes/$orderId'
+      fullPath: '/commande/succes/$orderId'
+      preLoaderRoute: typeof CommandeSuccesOrderIdRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/api/public/webhooks/saspay': {
